@@ -6,7 +6,14 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "supabase:login": "npx supabase login",
+    "supabase:link": "npx supabase link",
+    "supabase:db:push": "npx supabase db push",
+    "supabase:db:pull": "npx supabase db pull",
+    "supabase:db:reset": "npx supabase db reset",
+    "supabase:migration:new": "npx supabase migration new",
+    "supabase:gen:types": "npx supabase gen types typescript --linked > src/app/core/models/database.types.ts"
   },
   "private": true,
   "packageManager": "npm@11.6.2",
@@ -17,7 +24,12 @@
     "@angular/forms": "^21.2.0",
     "@angular/platform-browser": "^21.2.0",
     "@angular/router": "^21.2.0",
+    "@fortawesome/fontawesome-free": "^7.3.1",
+    "@supabase/supabase-js": "^2.119.2",
+    "@tailwindcss/postcss": "^4.3.5",
+    "postcss": "^8.5.33",
     "rxjs": "~7.8.0",
+    "tailwindcss": "^4.3.5",
     "tslib": "^2.3.0"
   },
   "devDependencies": {
