@@ -13,7 +13,7 @@
     "supabase:db:pull": "npx supabase db pull",
     "supabase:db:reset": "npx supabase db reset",
     "supabase:migration:new": "npx supabase migration new",
-    "supabase:gen:types": "npx supabase gen types typescript --linked > src/app/core/models/database.types.ts"
+    "supabase:gen:types": "npx supabase gen types typescript --remote > src/app/core/models/database.types.ts"
   },
   "private": true,
   "packageManager": "npm@11.6.2",
