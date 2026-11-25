@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth.service';
 import { UserRole } from '../../../core/models/user.model';
+import { CreateUserModalComponent } from './create-user-modal.component';
 
 @Component({
   selector: 'app-user-management-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CreateUserModalComponent],
   template: `
     <div class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
       <div class="bg-white rounded-2xl max-w-3xl w-full shadow-2xl border border-slate-100 overflow-hidden transform transition-all">
@@ -38,6 +39,11 @@ import { UserRole } from '../../../core/models/user.model';
             <i class="fa-solid fa-xmark text-lg"></i>
           </button>
         </div>
+
+        <!-- Create User Sub-Modal -->
+        @if (showCreateUser()) {
+          <app-create-user-modal (closed)="showCreateUser.set(false)" />
+        }
 
         <!-- Body -->
         <div class="p-6 space-y-4">
@@ -83,6 +89,15 @@ import { UserRole } from '../../../core/models/user.model';
             >
               <i class="fa-solid fa-rotate text-xs"></i>
               <span>Sincronizar</span>
+            </button>
+            <button
+              type="button"
+              (click)="showCreateUser.set(true)"
+              class="px-3 py-2 text-xs font-semibold text-white bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 rounded-xl transition flex items-center gap-1.5 shadow-sm"
+              title="Crear nuevo usuario médico"
+            >
+              <i class="fa-solid fa-user-plus text-xs"></i>
+              <span>Crear Usuario</span>
             </button>
           </div>
 
@@ -200,6 +215,7 @@ export class UserManagementModalComponent {
   @Output() close = new EventEmitter<void>();
 
   searchFilter = '';
+  showCreateUser = signal(false);
 
   readonly totalUsers = computed(() => this.auth.users().length);
   readonly totalAdmins = computed(() => this.auth.users().filter(u => u.role === 'admin').length);

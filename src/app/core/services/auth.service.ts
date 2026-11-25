@@ -296,6 +296,60 @@ export class AuthService {
   }
 
   /**
+   * Crea un nuevo usuario médico via Edge Function (Admin Only).
+   * Llama a supabase/functions/create-user con el JWT del admin actual.
+   */
+  async createUser(
+    email: string,
+    password: string,
+    name: string,
+    specialty: string,
+    role: 'admin' | 'doctor' = 'doctor'
+  ): Promise<boolean> {
+    if (!this.isAdmin()) {
+      this.toast.error('Acceso denegado', 'Solo los administradores pueden crear usuarios');
+      return false;
+    }
+
+    this._isLoading.set(true);
+    try {
+      const { data: { session } } = await this.supabase.auth.getSession();
+      if (!session) {
+        this.toast.error('Sin sesión', 'Tu sesión ha expirado, inicia sesión nuevamente');
+        return false;
+      }
+
+      const fnUrl = 'https://sakhxwlxjdulyivyilod.supabase.co/functions/v1/create-user';
+      const response = await fetch(fnUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ email, password, name, specialty, role }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        this.toast.error('Error al crear usuario', result.error ?? 'Error desconocido');
+        return false;
+      }
+
+      this.toast.success('Usuario creado', `${name} fue registrado correctamente en DocSaurio`);
+      // Recargar lista de usuarios
+      await this.syncUsersWithSupabase();
+      return true;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error de red al crear usuario';
+      this.toast.error('Error', message);
+      return false;
+    } finally {
+      this._isLoading.set(false);
+    }
+  }
+
+  /**
    * Elimina un usuario (Admin Only)
    */
   async deleteUser(userId: string): Promise<void> {

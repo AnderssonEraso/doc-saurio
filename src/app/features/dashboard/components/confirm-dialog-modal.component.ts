@@ -28,7 +28,7 @@ import { CommonModule } from '@angular/common';
           </div>
           <!-- Cute Mascot Badge -->
           <img
-            src="docsaurio-logo.svg"
+            src="docsaurio-logo.png"
             alt="DocSaurio"
             class="w-6 h-6 absolute -bottom-1 -right-1 drop-shadow-sm"
           />

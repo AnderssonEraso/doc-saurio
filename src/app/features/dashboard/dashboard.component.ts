@@ -55,7 +55,7 @@ import { ConfirmDialogModalComponent } from './components/confirm-dialog-modal.c
             <!-- Header -->
             <div class="flex items-center justify-between pb-4 border-b border-slate-100">
               <div class="flex items-center gap-2.5">
-                <img src="docsaurio-logo.svg" alt="DocSaurio" class="w-9 h-9 object-contain" />
+                <img src="docsaurio-logo.png" alt="DocSaurio" class="w-9 h-9 object-contain" />
                 <div>
                   <h3 class="font-extrabold text-slate-900 text-sm">Doc<span class="text-emerald-600">Saurio</span> 🩺</h3>
                   <p class="text-[10px] text-emerald-700 font-semibold uppercase">Notas Clínicas</p>
@@ -172,7 +172,7 @@ import { ConfirmDialogModalComponent } from './components/confirm-dialog-modal.c
 
               <div class="flex items-center gap-3">
                 <img
-                  src="docsaurio-logo.svg"
+                  src="docsaurio-logo.png"
                   alt="DocSaurio Logo"
                   class="w-11 h-11 object-contain drop-shadow-sm hover:scale-105 transition-transform"
                 />
@@ -930,7 +930,7 @@ import { ConfirmDialogModalComponent } from './components/confirm-dialog-modal.c
       <footer class="mt-auto border-t border-slate-200/80 bg-white/90 backdrop-blur-xs py-4 px-6 z-10">
         <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
           <div class="flex items-center gap-2">
-            <img src="docsaurio-logo.svg" alt="DocSaurio" class="w-7 h-7 object-contain" />
+            <img src="docsaurio-logo.png" alt="DocSaurio" class="w-7 h-7 object-contain" />
             <span class="font-bold text-slate-800 tracking-tight">DocSaurio</span>
             <span class="text-slate-300">•</span>
             <span>Notas Clínicas & Herramientas</span>

@@ -15,7 +15,7 @@ import { ToastService } from '../../core/services/toast.service';
         <!-- Logo Mascot -->
         <div class="inline-block relative mb-2 sm:mb-3">
           <img
-            src="docsaurio-logo.svg"
+            src="docsaurio-logo.png"
             alt="DocSaurio Mascota"
             class="w-20 h-20 sm:w-24 sm:h-24 mx-auto drop-shadow-lg hover:scale-105 transition-transform"
           />
@@ -93,7 +93,7 @@ import { ToastService } from '../../core/services/toast.service';
             </button>
           </form>
 
-          <!-- Register Link -->
+          <!-- Register Link 
           <div class="mt-6 text-center">
             <p class="text-xs text-slate-500">
               ¿No tienes una cuenta médica?
@@ -101,7 +101,7 @@ import { ToastService } from '../../core/services/toast.service';
                 Registrarse como profesional
               </a>
             </p>
-          </div>
+          </div>-->
 
         </div>
 

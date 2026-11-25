@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { adminGuard } from './core/guards/admin.guard';
 
 export const routes: Routes = [
   {
@@ -12,7 +13,9 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/login.component').then(m => m.LoginComponent),
   },
   {
+    // Registro solo accesible para administradores autenticados
     path: 'register',
+    canActivate: [adminGuard],
     loadComponent: () => import('./features/auth/register.component').then(m => m.RegisterComponent),
   },
   {

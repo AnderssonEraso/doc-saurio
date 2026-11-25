@@ -14,7 +14,7 @@ import { ToastService } from '../../core/services/toast.service';
       <div class="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <div class="inline-block relative mb-2">
           <img
-            src="docsaurio-logo.svg"
+            src="docsaurio-logo.png"
             alt="DocSaurio Mascota"
             class="w-16 h-16 sm:w-20 sm:h-20 mx-auto drop-shadow-md hover:scale-105 transition-transform"
           />
