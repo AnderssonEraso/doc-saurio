@@ -21,6 +21,7 @@ import { RecommendationModalComponent } from './components/recommendation-modal.
 import { AiAssistantModalComponent } from './components/ai-assistant-modal.component';
 import { QuickSearchModalComponent } from './components/quick-search-modal.component';
 import { UserManagementModalComponent } from './components/user-management-modal.component';
+import { ConfirmDialogModalComponent } from './components/confirm-dialog-modal.component';
 
 @Component({
   selector: 'app-dashboard',
@@ -35,6 +36,7 @@ import { UserManagementModalComponent } from './components/user-management-modal
     AiAssistantModalComponent,
     QuickSearchModalComponent,
     UserManagementModalComponent,
+    ConfirmDialogModalComponent,
   ],
   template: `
     <div class="min-h-screen bg-slate-50 flex flex-col font-sans selection:bg-teal-500 selection:text-white">
@@ -676,8 +678,8 @@ import { UserManagementModalComponent } from './components/user-management-modal
                             <!-- Delete -->
                             <button
                               type="button"
-                              (click)="medical.deleteRecommendation(rec.id)"
-                              class="p-1 text-slate-400 hover:text-rose-600 rounded hover:bg-slate-100"
+                              (click)="confirmDeleteRecommendation(rec)"
+                              class="p-1 text-slate-400 hover:text-rose-600 rounded hover:bg-slate-100 cursor-pointer"
                               title="Eliminar"
                             >
                               <i class="fa-regular fa-trash-can text-xs"></i>
@@ -843,6 +845,20 @@ import { UserManagementModalComponent } from './components/user-management-modal
         ></app-user-management-modal>
       }
 
+      <!-- Custom Confirmation Dialog Modal -->
+      @if (confirmDialogState().isOpen) {
+        <app-confirm-dialog-modal
+          [title]="confirmDialogState().title"
+          [message]="confirmDialogState().message"
+          [itemName]="confirmDialogState().itemName"
+          [confirmText]="confirmDialogState().confirmText || 'Sí, eliminar'"
+          [type]="confirmDialogState().type || 'danger'"
+          [icon]="confirmDialogState().icon || 'fa-triangle-exclamation'"
+          (cancel)="closeConfirmDialog()"
+          (confirm)="onDialogConfirm()"
+        ></app-confirm-dialog-modal>
+      }
+
     </div>
   `,
 })
@@ -855,6 +871,34 @@ export class DashboardComponent {
 
   // Responsive mobile menu state
   mobileMenuOpen = signal(false);
+
+  // Custom confirmation dialog state
+  confirmDialogState = signal<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    itemName?: string;
+    confirmText?: string;
+    type?: 'danger' | 'warning' | 'info';
+    icon?: string;
+    onConfirm?: () => Promise<void> | void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+  });
+
+  closeConfirmDialog(): void {
+    this.confirmDialogState.update(s => ({ ...s, isOpen: false }));
+  }
+
+  async onDialogConfirm(): Promise<void> {
+    const action = this.confirmDialogState().onConfirm;
+    this.closeConfirmDialog();
+    if (action) {
+      await action();
+    }
+  }
 
   // Modal display states
   showCategoryModal = signal(false);
@@ -925,11 +969,21 @@ export class DashboardComponent {
     this.showDiseaseModal.set(true);
   }
 
-  async confirmDeleteDisease(disease: Disease, e: Event): Promise<void> {
+  confirmDeleteDisease(disease: Disease, e: Event): void {
     e.stopPropagation();
-    if (confirm(`¿Estás seguro de eliminar la patología "${disease.name}" y todos sus tratamientos?`)) {
-      await this.medical.deleteDisease(disease.id);
-    }
+    this.confirmDialogState.set({
+      isOpen: true,
+      title: '¿Eliminar Patología?',
+      message: '¿Estás seguro de eliminar esta patología clínica y todos sus esquemas terapéuticos asociados?',
+      itemName: disease.name,
+      confirmText: 'Sí, eliminar patología',
+      type: 'danger',
+      icon: 'fa-disease',
+      onConfirm: async () => {
+        await this.medical.deleteDisease(disease.id);
+        this.toast.success('Patología eliminada', `"${disease.name}" eliminada correctamente.`);
+      }
+    });
   }
 
   async saveDisease(data: Omit<Disease, 'id' | 'createdAt'> & { id?: string }): Promise<void> {
@@ -955,10 +1009,36 @@ export class DashboardComponent {
     this.showTreatmentModal.set(true);
   }
 
-  async confirmDeleteTreatment(treatment: Treatment): Promise<void> {
-    if (confirm(`¿Eliminar el esquema de tratamiento "${treatment.name}"?`)) {
-      await this.medical.deleteTreatment(treatment.id);
-    }
+  confirmDeleteTreatment(treatment: Treatment): void {
+    this.confirmDialogState.set({
+      isOpen: true,
+      title: '¿Eliminar Esquema Terapéutico?',
+      message: '¿Estás seguro de eliminar este esquema de prescripción y sus recomendaciones?',
+      itemName: treatment.name,
+      confirmText: 'Sí, eliminar esquema',
+      type: 'danger',
+      icon: 'fa-capsules',
+      onConfirm: async () => {
+        await this.medical.deleteTreatment(treatment.id);
+        this.toast.success('Esquema eliminado', `"${treatment.name}" eliminado correctamente.`);
+      }
+    });
+  }
+
+  confirmDeleteRecommendation(rec: Recommendation): void {
+    this.confirmDialogState.set({
+      isOpen: true,
+      title: '¿Eliminar Recomendación?',
+      message: '¿Deseas remover esta indicación médica del esquema actual?',
+      itemName: rec.title || rec.description,
+      confirmText: 'Sí, eliminar indicación',
+      type: 'danger',
+      icon: 'fa-list-check',
+      onConfirm: async () => {
+        await this.medical.deleteRecommendation(rec.id);
+        this.toast.success('Recomendación eliminada', 'La indicación ha sido removida.');
+      }
+    });
   }
 
   async saveTreatment(data: Omit<Treatment, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }): Promise<void> {
