@@ -55,16 +55,19 @@ import { UserManagementModalComponent } from './components/user-management-modal
                 <i class="fa-solid fa-bars text-lg"></i>
               </button>
 
-              <div class="flex items-center gap-2.5">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 to-teal-500 text-white flex items-center justify-center text-lg shadow-md shadow-sky-600/20">
-                  <i class="fa-solid fa-staff-snake"></i>
-                </div>
+              <div class="flex items-center gap-3">
+                <img
+                  src="docsaurio-logo.svg"
+                  alt="DocSaurio Logo"
+                  class="w-11 h-11 object-contain drop-shadow-sm hover:scale-105 transition-transform"
+                />
                 <div>
-                  <h1 class="text-lg font-extrabold tracking-tight text-slate-900 leading-none">
-                    Royer <span class="text-teal-600">NovaMed</span>
+                  <h1 class="text-xl font-extrabold tracking-tight text-slate-900 leading-none flex items-center gap-1">
+                    Doc<span class="text-emerald-600">Saurio</span>
+                    <span class="text-xs">🩺</span>
                   </h1>
-                  <span class="text-[10px] font-medium text-slate-500 tracking-wider uppercase block mt-0.5">
-                    Esquemas Clínicos & Guías Terapéuticas
+                  <span class="text-[10px] font-semibold text-emerald-700 tracking-wider uppercase block mt-0.5">
+                    Notas Clínicas & Herramientas
                   </span>
                 </div>
               </div>
@@ -100,38 +103,18 @@ import { UserManagementModalComponent } from './components/user-management-modal
                 <i class="fa-solid fa-magnifying-glass text-base"></i>
               </button>
 
-              <!-- Role Switcher -->
-              <button
-                type="button"
-                (click)="auth.toggleRole()"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition"
-                [ngClass]="auth.isAdmin() ? 'bg-slate-900 text-white border-slate-800' : 'bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100'"
-                title="Haz clic para alternar entre rol de Médico y Administrador"
-              >
-                <i class="fa-solid" [ngClass]="auth.isAdmin() ? 'fa-shield-halved' : 'fa-user-doctor'"></i>
-                <span class="hidden sm:inline">Rol:</span>
-                <span>{{ auth.isAdmin() ? 'Admin' : 'Médico' }}</span>
-              </button>
-
-              <!-- Admin Users Modal Trigger -->
-              <button
-                type="button"
-                (click)="showUserManagementModal.set(true)"
-                class="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition"
-                title="Gestión de Usuarios del Sistema"
-              >
-                <i class="fa-solid fa-users-gear text-base"></i>
-              </button>
-
-              <!-- Reset Data -->
-              <button
-                type="button"
-                (click)="restoreMockData()"
-                class="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition"
-                title="Restablecer datos originales de prueba"
-              >
-                <i class="fa-solid fa-rotate-left text-sm"></i>
-              </button>
+              <!-- Admin Users Panel (Only visible for real administrators) -->
+              @if (auth.isAdmin()) {
+                <button
+                  type="button"
+                  (click)="showUserManagementModal.set(true)"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold shadow-xs transition cursor-pointer"
+                  title="Gestión de Usuarios del Sistema (Vista de Administrador)"
+                >
+                  <i class="fa-solid fa-users-gear text-amber-400 text-xs"></i>
+                  <span class="hidden md:inline">Gestión Usuarios</span>
+                </button>
+              }
 
               <!-- User avatar / Logout -->
               <div class="flex items-center gap-2 pl-2 border-l border-slate-200">
@@ -748,11 +731,22 @@ import { UserManagementModalComponent } from './components/user-management-modal
             } @else {
               <!-- Empty state when no disease is selected -->
               <div class="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-3">
-                <i class="fa-solid fa-heart-pulse text-4xl text-slate-300"></i>
-                <h3 class="text-base font-bold text-slate-700">Selecciona o registra una patología clínica</h3>
-                <p class="text-xs text-slate-400 max-w-sm mx-auto">
-                  Utiliza la lista de la izquierda o la barra de búsqueda superior para comenzar a explorar esquemas médicos.
+                <div class="w-16 h-16 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center mx-auto text-2xl mb-2">
+                  <i class="fa-solid fa-heart-pulse"></i>
+                </div>
+                <h3 class="text-base font-bold text-slate-800">No tienes patologías registradas todavía</h3>
+                <p class="text-xs text-slate-500 max-w-sm mx-auto">
+                  Tus esquemas clínicos, tratamientos y notas se guardan de forma privada y exclusiva para tu cuenta médica.
                 </p>
+                <div class="pt-2">
+                  <button
+                    type="button"
+                    (click)="openNewDiseaseModal()"
+                    class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-sky-600 hover:bg-sky-700 rounded-xl shadow-xs transition cursor-pointer"
+                  >
+                    <i class="fa-solid fa-plus"></i> Registrar Primera Patología
+                  </button>
+                </div>
               </div>
             }
 
@@ -760,6 +754,24 @@ import { UserManagementModalComponent } from './components/user-management-modal
 
         </div>
       </main>
+
+      <!-- Footer -->
+      <footer class="mt-auto border-t border-slate-200/80 bg-white/90 backdrop-blur-xs py-4 px-6 z-10">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+          <div class="flex items-center gap-2">
+            <img src="docsaurio-logo.svg" alt="DocSaurio" class="w-7 h-7 object-contain" />
+            <span class="font-bold text-slate-800 tracking-tight">DocSaurio</span>
+            <span class="text-slate-300">•</span>
+            <span>Notas Clínicas & Herramientas</span>
+          </div>
+          <div class="flex items-center gap-1.5 text-slate-600">
+            <span>Created by</span>
+            <span class="font-semibold text-slate-800">Royer Sarmiento</span>
+            <span class="text-slate-400">&</span>
+            <span class="font-semibold text-slate-800">Luis Eraso</span>
+          </div>
+        </div>
+      </footer>
 
       <!-- ================= MODALS ================= -->
 
@@ -889,14 +901,14 @@ export class DashboardComponent {
     this.showCategoryModal.set(true);
   }
 
-  saveCategory(data: Omit<Category, 'id' | 'createdAt'> & { id?: string }): void {
+  async saveCategory(data: Omit<Category, 'id' | 'createdAt'> & { id?: string }): Promise<void> {
     if (data.id) {
       const existing = this.medical.categories().find(c => c.id === data.id);
       if (existing) {
-        this.medical.updateCategory({ ...existing, ...data });
+        await this.medical.updateCategory({ ...existing, ...data });
       }
     } else {
-      this.medical.addCategory(data);
+      await this.medical.addCategory(data);
     }
     this.showCategoryModal.set(false);
   }
@@ -913,21 +925,21 @@ export class DashboardComponent {
     this.showDiseaseModal.set(true);
   }
 
-  confirmDeleteDisease(disease: Disease, e: Event): void {
+  async confirmDeleteDisease(disease: Disease, e: Event): Promise<void> {
     e.stopPropagation();
     if (confirm(`¿Estás seguro de eliminar la patología "${disease.name}" y todos sus tratamientos?`)) {
-      this.medical.deleteDisease(disease.id);
+      await this.medical.deleteDisease(disease.id);
     }
   }
 
-  saveDisease(data: Omit<Disease, 'id' | 'createdAt'> & { id?: string }): void {
+  async saveDisease(data: Omit<Disease, 'id' | 'createdAt'> & { id?: string }): Promise<void> {
     if (data.id) {
       const existing = this.medical.diseases().find(d => d.id === data.id);
       if (existing) {
-        this.medical.updateDisease({ ...existing, ...data });
+        await this.medical.updateDisease({ ...existing, ...data });
       }
     } else {
-      this.medical.addDisease(data);
+      await this.medical.addDisease(data);
     }
     this.showDiseaseModal.set(false);
   }
@@ -943,20 +955,20 @@ export class DashboardComponent {
     this.showTreatmentModal.set(true);
   }
 
-  confirmDeleteTreatment(treatment: Treatment): void {
+  async confirmDeleteTreatment(treatment: Treatment): Promise<void> {
     if (confirm(`¿Eliminar el esquema de tratamiento "${treatment.name}"?`)) {
-      this.medical.deleteTreatment(treatment.id);
+      await this.medical.deleteTreatment(treatment.id);
     }
   }
 
-  saveTreatment(data: Omit<Treatment, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }): void {
+  async saveTreatment(data: Omit<Treatment, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }): Promise<void> {
     if (data.id) {
       const existing = this.medical.treatments().find(t => t.id === data.id);
       if (existing) {
-        this.medical.updateTreatment({ ...existing, ...data });
+        await this.medical.updateTreatment({ ...existing, ...data });
       }
     } else {
-      this.medical.addTreatment(data);
+      await this.medical.addTreatment(data);
     }
     this.showTreatmentModal.set(false);
   }
@@ -972,14 +984,14 @@ export class DashboardComponent {
     this.showRecommendationModal.set(true);
   }
 
-  saveRecommendation(data: Omit<Recommendation, 'id' | 'createdAt'> & { id?: string }): void {
+  async saveRecommendation(data: Omit<Recommendation, 'id' | 'createdAt'> & { id?: string }): Promise<void> {
     if (data.id) {
       const existing = this.medical.recommendations().find(r => r.id === data.id);
       if (existing) {
-        this.medical.updateRecommendation({ ...existing, ...data });
+        await this.medical.updateRecommendation({ ...existing, ...data });
       }
     } else {
-      this.medical.addRecommendation(data);
+      await this.medical.addRecommendation(data);
     }
     this.showRecommendationModal.set(false);
   }
@@ -995,12 +1007,12 @@ export class DashboardComponent {
     this.showAiModal.set(true);
   }
 
-  onApplyAiDraft(draft: AiGeneratedDraft): void {
+  async onApplyAiDraft(draft: AiGeneratedDraft): Promise<void> {
     const disease = this.medical.activeDisease();
     if (!disease) return;
 
     // Create treatment from draft
-    const newTreat = this.medical.addTreatment({
+    const newTreat = await this.medical.addTreatment({
       diseaseId: disease.id,
       name: draft.name,
       regimen: draft.regimen,
@@ -1008,24 +1020,27 @@ export class DashboardComponent {
       clinicalNotes: draft.clinicalNotes,
     });
 
-    // Create recommendations linked to this new treatment
-    draft.recommendations.forEach((rec, idx) => {
-      this.medical.addRecommendation({
-        treatmentId: newTreat.id,
-        type: rec.type,
-        title: rec.title,
-        description: rec.description,
-        order: idx + 1,
-      });
-    });
+    if (newTreat) {
+      // Create recommendations linked to this new treatment
+      for (let idx = 0; idx < draft.recommendations.length; idx++) {
+        const rec = draft.recommendations[idx];
+        await this.medical.addRecommendation({
+          treatmentId: newTreat.id,
+          type: rec.type,
+          title: rec.title,
+          description: rec.description,
+          order: idx + 1,
+        });
+      }
+    }
 
     this.toast.success('Borrador IA Aplicado', `Se creó el esquema "${draft.name}" con sus recomendaciones`);
   }
 
-  onApplyAiText(improvedText: string): void {
+  async onApplyAiText(improvedText: string): Promise<void> {
     const active = this.medical.activeTreatment();
     if (active) {
-      this.medical.updateTreatment({
+      await this.medical.updateTreatment({
         ...active,
         regimen: improvedText,
       });
@@ -1046,13 +1061,6 @@ export class DashboardComponent {
   copyRecommendations(disease: Disease): void {
     const recs = this.medical.recommendationsForActiveTreatment();
     this.clipboard.copyRecommendations(disease, recs);
-  }
-
-  // Restore sample demo data
-  restoreMockData(): void {
-    if (confirm('¿Restablecer todas las patologías, categorías y tratamientos a los datos de prueba originales?')) {
-      this.medical.restoreDefaultData();
-    }
   }
 
   // Visual Helpers

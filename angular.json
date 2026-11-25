@@ -6,7 +6,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "novamed-web": {
+    "docsaurio": {
       "projectType": "application",
       "schematics": {},
       "root": "",
@@ -56,10 +56,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "novamed-web:build:production"
+              "buildTarget": "docsaurio:build:production"
             },
             "development": {
-              "buildTarget": "novamed-web:build:development"
+              "buildTarget": "docsaurio:build:development"
             }
           },
           "defaultConfiguration": "development"

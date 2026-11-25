@@ -49,7 +49,7 @@ export class ClipboardService {
     const alarmSigns = recommendations.filter(r => r.type === 'alarm_sign');
     const indications = recommendations.filter(r => r.type === 'indication');
 
-    let text = `🏥 ROYER NOVAMED - PLAN MÉDICO INTEGRAL\n`;
+    let text = `🦖 DOCSAURIO - PLAN MÉDICO INTEGRAL\n`;
     text += `${divider}\n`;
     text += `🩺 PATOLOGÍA: ${disease.name.toUpperCase()} (CIE-10: ${disease.code})\n`;
     text += `📋 ESQUEMA: ${treatment.name}\n`;
@@ -100,7 +100,7 @@ export class ClipboardService {
     }
 
     text += `${divider}\n`;
-    text += `Dr(a). Tratante • Royer NovaMed Clinical System`;
+    text += `Dr(a). Tratante • DocSaurio Clinical System`;
 
     return this.writeText(
       text,

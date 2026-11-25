@@ -1,10 +1,9 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
-import { UserRole } from '../../core/models/user.model';
 
 @Component({
   selector: 'app-register',
@@ -13,12 +12,16 @@ import { UserRole } from '../../core/models/user.model';
   template: `
     <div class="min-h-screen bg-gradient-to-br from-slate-50 via-sky-50/30 to-teal-50/40 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div class="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-sky-600 to-teal-500 text-white shadow-lg shadow-sky-600/20 mb-3">
-          <i class="fa-solid fa-user-plus text-2xl"></i>
+        <div class="inline-block relative mb-2">
+          <img
+            src="docsaurio-logo.svg"
+            alt="DocSaurio Mascota"
+            class="w-20 h-20 mx-auto drop-shadow-md hover:scale-105 transition-transform"
+          />
         </div>
         <h2 class="text-2xl font-bold text-slate-900">Registro de Profesional Clínico</h2>
         <p class="mt-1 text-xs text-slate-600">
-          Únete a la red médica de Royer NovaMed
+          Únete a la red médica de DocSaurio 🩺
         </p>
       </div>
 
@@ -71,22 +74,10 @@ import { UserRole } from '../../core/models/user.model';
                   [(ngModel)]="email"
                   name="email"
                   required
-                  placeholder="mariana.silva@novamed.com"
+                  placeholder="ej. mariana.silva@mednote.com"
                   class="block w-full pl-10 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
                 />
               </div>
-            </div>
-
-            <div>
-              <label class="block text-xs font-medium text-slate-700">Rol Inicial</label>
-              <select
-                [(ngModel)]="role"
-                name="role"
-                class="mt-1 block w-full pl-3 pr-8 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 bg-white"
-              >
-                <option value="doctor">Médico General / Especialista</option>
-                <option value="admin">Administrador del Sistema</option>
-              </select>
             </div>
 
             <div>
@@ -108,9 +99,14 @@ import { UserRole } from '../../core/models/user.model';
 
             <button
               type="submit"
-              class="w-full flex justify-center items-center gap-2 py-2.5 px-4 mt-2 border border-transparent rounded-lg shadow text-sm font-medium text-white bg-gradient-to-r from-sky-600 to-teal-600 hover:from-sky-700 hover:to-teal-700 transition"
+              [disabled]="auth.isLoading()"
+              class="w-full flex justify-center items-center gap-2 py-2.5 px-4 mt-2 border border-transparent rounded-lg shadow text-sm font-medium text-white bg-gradient-to-r from-sky-600 to-teal-600 hover:from-sky-700 hover:to-teal-700 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
-              <i class="fa-solid fa-check-to-slot"></i> Completar Registro
+              @if (auth.isLoading()) {
+                <i class="fa-solid fa-circle-notch fa-spin"></i> Registrando...
+              } @else {
+                <i class="fa-solid fa-check-to-slot"></i> Completar Registro
+              }
             </button>
           </form>
 
@@ -120,26 +116,33 @@ import { UserRole } from '../../core/models/user.model';
             </a>
           </div>
         </div>
+
+        <!-- Footer Credits -->
+        <p class="mt-6 text-center text-xs text-slate-500 flex items-center justify-center gap-1.5">
+          <span>Created by</span>
+          <span class="font-semibold text-slate-700">Royer Sarmiento</span>
+          <span class="text-slate-400">&</span>
+          <span class="font-semibold text-slate-700">Luis Eraso</span>
+        </p>
       </div>
     </div>
   `,
 })
 export class RegisterComponent {
-  private readonly auth = inject(AuthService);
+  protected readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
 
   name = '';
   email = '';
   specialty = '';
-  role: UserRole = 'doctor';
   password = '';
 
-  onRegister(e: Event): void {
+  async onRegister(e: Event): Promise<void> {
     e.preventDefault();
-    if (!this.name || !this.email) {
-      this.toast.warning('Datos incompletos', 'Completa los campos obligatorios');
+    if (!this.name || !this.email || !this.password) {
+      this.toast.warning('Datos incompletos', 'Completa todos los campos obligatorios');
       return;
     }
-    this.auth.register(this.name, this.email, this.specialty, this.role);
+    await this.auth.register(this.name, this.email, this.password, this.specialty);
   }
 }

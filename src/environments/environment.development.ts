@@ -1,7 +1,7 @@
 export const environment = {
   production: true,
   supabase: {
-    url: 'https://TU_PROJECT_REF.supabase.co',
-    anonKey: 'TU_SUPABASE_ANON_KEY',
+    url: 'https://sakhxwlxjdulyivyilod.supabase.co',
+    anonKey: 'sb_publishable_GoyENUyV3mPoIboGbFB9LQ_fHUikk5t',
   },
 };

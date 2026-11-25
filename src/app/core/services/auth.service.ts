@@ -1,56 +1,40 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
 import { User, UserRole } from '../models/user.model';
-import { INITIAL_USERS } from '../mocks/mock-data';
 import { ToastService } from './toast.service';
+import { SupabaseService } from './supabase.service';
 
-const SESSION_STORAGE_KEY = 'novamed_current_user';
-const USERS_STORAGE_KEY = 'novamed_users_list';
+const SESSION_STORAGE_KEY = 'docsaurio_current_user';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AuthService {
-  private readonly _users = signal<User[]>(this.loadUsers());
-  private readonly _currentUser = signal<User | null>(this.loadInitialSession());
+  private readonly _currentUser = signal<User | null>(this.loadCachedSession());
+  private readonly _users = signal<User[]>([]);
+  private readonly _isLoading = signal<boolean>(false);
 
-  public readonly users = this._users.asReadonly();
   public readonly currentUser = this._currentUser.asReadonly();
+  public readonly users = this._users.asReadonly();
+  public readonly isLoading = this._isLoading.asReadonly();
   public readonly isAuthenticated = computed(() => !!this._currentUser());
   public readonly isAdmin = computed(() => this._currentUser()?.role === 'admin');
 
   constructor(
     private router: Router,
-    private toast: ToastService
-  ) {}
-
-  private loadUsers(): User[] {
-    try {
-      const stored = localStorage.getItem(USERS_STORAGE_KEY);
-      return stored ? JSON.parse(stored) : INITIAL_USERS;
-    } catch {
-      return INITIAL_USERS;
-    }
+    private toast: ToastService,
+    private supabase: SupabaseService
+  ) {
+    this.initAuthListener();
   }
 
-  private saveUsers(users: User[]): void {
-    this._users.set(users);
-    try {
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
-    } catch (e) {
-      console.warn('LocalStorage error:', e);
-    }
-  }
-
-  private loadInitialSession(): User | null {
+  private loadCachedSession(): User | null {
     try {
       const session = localStorage.getItem(SESSION_STORAGE_KEY);
-      if (session) {
-        return JSON.parse(session);
-      }
-    } catch {}
-    // Default to the first doctor for demo readiness if no previous logout
-    return INITIAL_USERS[0];
+      return session ? JSON.parse(session) : null;
+    } catch {
+      return null;
+    }
   }
 
   private persistSession(user: User | null): void {
@@ -62,109 +46,277 @@ export class AuthService {
     }
   }
 
-  login(email: string): boolean {
-    const found = this._users().find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (found) {
-      this.persistSession(found);
-      this.toast.success('Sesión iniciada', `Bienvenido(a), ${found.name}`);
-      this.router.navigate(['/dashboard']);
-      return true;
+  /**
+   * Inicializa la escucha de cambios de sesión en Supabase Auth
+   */
+  private async initAuthListener(): Promise<void> {
+    try {
+      // Verificar sesión activa existente
+      const { data: { session } } = await this.supabase.auth.getSession();
+      if (session?.user) {
+        await this.loadUserProfile(session.user.id, session.user.email ?? '');
+      }
+
+      // Escuchar eventos de sesión (login, logout, token refresh)
+      this.supabase.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          await this.loadUserProfile(session.user.id, session.user.email ?? '');
+        } else if (event === 'SIGNED_OUT') {
+          this.persistSession(null);
+          this._users.set([]);
+        }
+      });
+    } catch (err) {
+      console.warn('Error inicializando sesión de Supabase:', err);
+    }
+  }
+
+  /**
+   * Carga el perfil del usuario desde la tabla profiles
+   */
+  async loadUserProfile(userId: string, emailFallback: string = ''): Promise<User | null> {
+    try {
+      const { data, error } = await this.supabase.client
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (!error && data) {
+        const user: User = {
+          id: data.id,
+          name: data.name,
+          email: data.email,
+          role: data.role as UserRole,
+          avatarUrl: data.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(data.name)}`,
+          specialty: data.specialty || 'Medicina General',
+          createdAt: data.created_at,
+        };
+        this.persistSession(user);
+
+        // Si es admin, cargar la lista de todos los usuarios
+        if (user.role === 'admin') {
+          await this.syncUsersWithSupabase();
+        }
+
+        return user;
+      }
+
+      // Si no existe perfil en tabla profiles aún, estructurar desde auth
+      const basicUser: User = {
+        id: userId,
+        name: emailFallback.split('@')[0] || 'Médico',
+        email: emailFallback,
+        role: 'doctor',
+        avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(emailFallback)}`,
+        specialty: 'Medicina General',
+        createdAt: new Date().toISOString(),
+      };
+      this.persistSession(basicUser);
+      return basicUser;
+    } catch (err) {
+      console.error('Error cargando perfil:', err);
+      return null;
+    }
+  }
+
+  /**
+   * Inicia sesión con correo y contraseña en Supabase Auth
+   */
+  async login(email: string, password: string): Promise<boolean> {
+    if (!email || !password) {
+      this.toast.warning('Campos requeridos', 'Por favor ingresa tu correo y contraseña');
+      return false;
     }
 
-    // Auto-create doctor user for quick testing if not existing
-    const newUser: User = {
-      id: `usr-${Date.now()}`,
-      name: email.split('@')[0].replace('.', ' ').replace(/^./, str => str.toUpperCase()),
-      email,
-      role: 'doctor',
-      specialty: 'Medicina General',
-      avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(email)}`,
-      createdAt: new Date().toISOString(),
-    };
+    this._isLoading.set(true);
+    try {
+      const { data, error } = await this.supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password,
+      });
 
-    const updated = [...this._users(), newUser];
-    this.saveUsers(updated);
-    this.persistSession(newUser);
-    this.toast.success('Cuenta configurada', `Bienvenido al sistema ${newUser.name}`);
-    this.router.navigate(['/dashboard']);
-    return true;
-  }
+      if (error) {
+        let msg = error.message;
+        if (msg.includes('Invalid login credentials')) {
+          msg = 'Credenciales incorrectas. Verifica tu correo y contraseña.';
+        } else if (msg.includes('Email not confirmed')) {
+          msg = 'Debes confirmar tu correo electrónico antes de iniciar sesión.';
+        }
+        this.toast.error('Error de autenticación', msg);
+        return false;
+      }
 
-  loginDemo(role: UserRole = 'doctor'): void {
-    const demoUser = this._users().find(u => u.role === role) || this._users()[0];
-    this.persistSession(demoUser);
-    this.toast.success(
-      'Acceso Demo Activado',
-      `Sesión iniciada como ${demoUser.name} (${demoUser.role === 'admin' ? 'Administrador' : 'Médico General'})`
-    );
-    this.router.navigate(['/dashboard']);
-  }
+      if (data?.user) {
+        const user = await this.loadUserProfile(data.user.id, data.user.email ?? email);
+        this.toast.success('Sesión iniciada', `Bienvenido al sistema DocSaurio${user ? ', ' + user.name : ''}`);
+        this.router.navigate(['/dashboard']);
+        return true;
+      }
 
-  toggleRole(): void {
-    const current = this._currentUser();
-    if (!current) return;
-    const newRole: UserRole = current.role === 'admin' ? 'doctor' : 'admin';
-    const updatedUser: User = { ...current, role: newRole };
-    
-    // Update in users list
-    const updatedUsers = this._users().map(u => u.id === current.id ? updatedUser : u);
-    this.saveUsers(updatedUsers);
-    this.persistSession(updatedUser);
-
-    this.toast.info(
-      'Rol Actualizado',
-      `Ahora estás visualizando el sistema como: ${newRole === 'admin' ? 'Administrador' : 'Médico Clínico'}`
-    );
-  }
-
-  updateUserRole(userId: string, newRole: UserRole): void {
-    const updated = this._users().map(u => u.id === userId ? { ...u, role: newRole } : u);
-    this.saveUsers(updated);
-
-    if (this._currentUser()?.id === userId) {
-      this.persistSession({ ...this._currentUser()!, role: newRole });
+      return false;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'No se pudo conectar con el servidor de autenticación';
+      this.toast.error('Error de conexión', message);
+      return false;
+    } finally {
+      this._isLoading.set(false);
     }
-    this.toast.success('Rol cambiado', `Permisos del usuario actualizados a ${newRole}`);
   }
 
-  deleteUser(userId: string): void {
+  /**
+   * Registro real de un nuevo profesional médico en Supabase Auth
+   */
+  async register(name: string, email: string, password: string, specialty: string): Promise<boolean> {
+    if (!name || !email || !password) {
+      this.toast.warning('Campos incompletos', 'Completa todos los campos obligatorios');
+      return false;
+    }
+
+    if (password.length < 6) {
+      this.toast.warning('Contraseña muy corta', 'La contraseña debe tener al menos 6 caracteres');
+      return false;
+    }
+
+    this._isLoading.set(true);
+    try {
+      const { data, error } = await this.supabase.auth.signUp({
+        email: email.trim(),
+        password: password,
+        options: {
+          data: {
+            name: name.trim(),
+            specialty: specialty.trim() || 'Medicina General',
+            role: 'doctor',
+          },
+        },
+      });
+
+      if (error) {
+        this.toast.error('Error en registro', error.message);
+        return false;
+      }
+
+      if (data?.user) {
+        if (data.session) {
+          // Autologin si Supabase no requiere confirmación de email
+          await this.loadUserProfile(data.user.id, data.user.email ?? email);
+          this.toast.success('Registro exitoso', `Bienvenido(a) a DocSaurio, ${name}`);
+          this.router.navigate(['/dashboard']);
+        } else {
+          // Si requiere confirmación por email
+          this.toast.success(
+            'Cuenta creada',
+            'Se ha registrado tu cuenta médica. Si Supabase requiere confirmación, revisa tu correo electrónico.'
+          );
+          this.router.navigate(['/login']);
+        }
+        return true;
+      }
+
+      return false;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al registrar usuario';
+      this.toast.error('Error de registro', message);
+      return false;
+    } finally {
+      this._isLoading.set(false);
+    }
+  }
+
+  /**
+   * Cierra la sesión en Supabase y limpia el estado local
+   */
+  async logout(): Promise<void> {
+    try {
+      await this.supabase.auth.signOut();
+    } catch (err) {
+      console.warn('Error en signout de Supabase:', err);
+    }
+    this.persistSession(null);
+    this._users.set([]);
+    this.toast.info('Sesión cerrada', 'Has salido de DocSaurio de manera segura');
+    this.router.navigate(['/login']);
+  }
+
+  /**
+   * Sincroniza la lista de usuarios para la vista de administrador
+   */
+  async syncUsersWithSupabase(): Promise<void> {
+    try {
+      const { data, error } = await this.supabase.client
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        const mappedUsers: User[] = data.map(p => ({
+          id: p.id,
+          name: p.name,
+          email: p.email,
+          role: p.role as UserRole,
+          avatarUrl: p.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(p.name)}`,
+          specialty: p.specialty || 'Medicina General',
+          createdAt: p.created_at,
+        }));
+        this._users.set(mappedUsers);
+      }
+    } catch {
+      // Ignorar
+    }
+  }
+
+  /**
+   * Actualiza el rol de un usuario (Admin Only)
+   */
+  async updateUserRole(userId: string, newRole: UserRole): Promise<void> {
+    try {
+      const { error } = await this.supabase.client
+        .from('profiles')
+        .update({ role: newRole, updated_at: new Date().toISOString() })
+        .eq('id', userId);
+
+      if (error) {
+        this.toast.error('Error', 'No se pudo actualizar el rol: ' + error.message);
+        return;
+      }
+
+      const updated = this._users().map(u => (u.id === userId ? { ...u, role: newRole } : u));
+      this._users.set(updated);
+
+      if (this._currentUser()?.id === userId) {
+        this.persistSession({ ...this._currentUser()!, role: newRole });
+      }
+
+      this.toast.success('Rol actualizado', `Usuario actualizado a ${newRole === 'admin' ? 'Administrador' : 'Médico'}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al cambiar rol';
+      this.toast.error('Error', message);
+    }
+  }
+
+  /**
+   * Elimina un usuario (Admin Only)
+   */
+  async deleteUser(userId: string): Promise<void> {
     if (this._currentUser()?.id === userId) {
       this.toast.warning('Operación bloqueada', 'No puedes eliminar tu propio usuario en sesión');
       return;
     }
-    const updated = this._users().filter(u => u.id !== userId);
-    this.saveUsers(updated);
-    this.toast.info('Usuario eliminado', 'El usuario fue removido del sistema');
-  }
 
-  register(name: string, email: string, specialty: string, role: UserRole = 'doctor'): boolean {
-    const existing = this._users().find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (existing) {
-      this.toast.error('Error de registro', 'Ya existe un usuario con este correo electrónico');
-      return false;
+    try {
+      const { error } = await this.supabase.client.from('profiles').delete().eq('id', userId);
+      if (error) {
+        this.toast.error('Error', 'No se pudo eliminar el usuario: ' + error.message);
+        return;
+      }
+
+      const updated = this._users().filter(u => u.id !== userId);
+      this._users.set(updated);
+      this.toast.info('Usuario eliminado', 'El usuario fue removido del sistema');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al eliminar usuario';
+      this.toast.error('Error', message);
     }
-
-    const newUser: User = {
-      id: `usr-${Date.now()}`,
-      name,
-      email,
-      specialty: specialty || 'Médico Clínico',
-      role,
-      avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`,
-      createdAt: new Date().toISOString(),
-    };
-
-    const updated = [...this._users(), newUser];
-    this.saveUsers(updated);
-    this.persistSession(newUser);
-    this.toast.success('Registro exitoso', `Bienvenido al equipo médico de NovaMed, ${name}`);
-    this.router.navigate(['/dashboard']);
-    return true;
-  }
-
-  logout(): void {
-    this.persistSession(null);
-    this.toast.info('Sesión cerrada', 'Has salido de Royer NovaMed de manera segura');
-    this.router.navigate(['/login']);
   }
 }

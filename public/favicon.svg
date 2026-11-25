@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background & Body Gradients -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ecfdf5"/>
+      <stop offset="100%" stop-color="#d1fae5"/>
+    </linearGradient>
+    <linearGradient id="dinoSkin" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="60%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <linearGradient id="dinoCheeks" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f472b6" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#fb7185" stop-opacity="0.2"/>
+    </linearGradient>
+    <linearGradient id="dinoBelly" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a7f3d0"/>
+      <stop offset="100%" stop-color="#6ee7b7"/>
+    </linearGradient>
+    <linearGradient id="stethoTube" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0ea5e9"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+    <linearGradient id="stethoMetal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f1f5f9"/>
+      <stop offset="50%" stop-color="#cbd5e1"/>
+      <stop offset="100%" stop-color="#94a3b8"/>
+    </linearGradient>
+    <filter id="softShadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#064e3b" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <!-- Circular Badge Background -->
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)"/>
+  <circle cx="256" cy="256" r="230" fill="none" stroke="#10b981" stroke-width="6" stroke-dasharray="16 12" stroke-opacity="0.3"/>
+
+  <!-- Dino Spikes / Crest on Head -->
+  <g fill="#059669" opacity="0.95">
+    <path d="M 230 75 Q 242 45 256 60 Q 252 75 245 85 Z"/>
+    <path d="M 200 95 Q 205 68 220 80 Q 215 95 210 105 Z"/>
+    <path d="M 265 95 Q 280 70 288 88 Q 280 100 270 105 Z"/>
+  </g>
+
+  <!-- Dino Head and Body -->
+  <g filter="url(#softShadow)">
+    <!-- Body / Back -->
+    <ellipse cx="256" cy="340" rx="140" ry="120" fill="url(#dinoSkin)"/>
+
+    <!-- White Doctor Coat / Uniform -->
+    <path d="M 145 340 Q 155 450 256 460 Q 357 450 367 340 C 370 380 340 455 256 462 C 172 455 142 380 145 340 Z" fill="#ffffff" opacity="0.95"/>
+    <path d="M 190 320 L 256 430 L 322 320 L 290 310 L 256 360 L 222 310 Z" fill="#f8fafc"/>
+    <!-- Coat Lapels -->
+    <path d="M 195 315 L 235 390 L 220 450 L 175 350 Z" fill="#e2e8f0" opacity="0.7"/>
+    <path d="M 317 315 L 277 390 L 292 450 L 337 350 Z" fill="#e2e8f0" opacity="0.7"/>
+    <!-- Medical Red Cross on Coat Pocket -->
+    <rect x="300" y="380" width="34" height="26" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+    <rect x="313" y="386" width="8" height="14" rx="2" fill="#ef4444"/>
+    <rect x="310" y="389" width="14" height="8" rx="2" fill="#ef4444"/>
+
+    <!-- Dino Head (Cute Chibi Silhouette) -->
+    <ellipse cx="256" cy="195" rx="130" ry="115" fill="url(#dinoSkin)"/>
+    <!-- Cheeks Bulge -->
+    <ellipse cx="165" cy="225" rx="35" ry="30" fill="url(#dinoSkin)"/>
+    <ellipse cx="347" cy="225" rx="35" ry="30" fill="url(#dinoSkin)"/>
+
+    <!-- Cute Dino Snout / Mouth Region -->
+    <ellipse cx="256" cy="235" rx="85" ry="55" fill="#a7f3d0" opacity="0.85"/>
+
+    <!-- Nostrils -->
+    <ellipse cx="236" cy="220" rx="5" ry="7" fill="#047857"/>
+    <ellipse cx="276" cy="220" rx="5" ry="7" fill="#047857"/>
+
+    <!-- Gentle Warm Smile -->
+    <path d="M 226 242 Q 256 268 286 242" fill="none" stroke="#065f46" stroke-width="5" stroke-linecap="round"/>
+    <!-- Little Cute Fang / Tooth -->
+    <path d="M 268 250 L 274 259 L 280 248 Z" fill="#ffffff"/>
+
+    <!-- Kawaii Blush / Rosy Cheeks -->
+    <circle cx="165" cy="225" r="22" fill="url(#dinoCheeks)"/>
+    <circle cx="347" cy="225" r="22" fill="url(#dinoCheeks)"/>
+
+    <!-- Big Shiny Happy Eyes -->
+    <!-- Left Eye -->
+    <ellipse cx="195" cy="175" rx="22" ry="26" fill="#0f172a"/>
+    <circle cx="188" cy="165" r="9" fill="#ffffff"/>
+    <circle cx="204" cy="186" r="4" fill="#ffffff"/>
+    <!-- Right Eye -->
+    <ellipse cx="317" cy="175" rx="22" ry="26" fill="#0f172a"/>
+    <circle cx="310" cy="165" r="9" fill="#ffffff"/>
+    <circle cx="326" cy="186" r="4" fill="#ffffff"/>
+
+    <!-- Cute Eyebrows -->
+    <path d="M 180 142 Q 198 135 212 142" fill="none" stroke="#047857" stroke-width="4.5" stroke-linecap="round"/>
+    <path d="M 300 142 Q 314 135 332 142" fill="none" stroke="#047857" stroke-width="4.5" stroke-linecap="round"/>
+
+    <!-- Doctor Stethoscope (Fonendoscopio) -->
+    <!-- Neck Tube Left -->
+    <path d="M 185 270 C 170 320 185 410 230 425 C 250 432 256 420 256 405" fill="none" stroke="url(#stethoTube)" stroke-width="14" stroke-linecap="round"/>
+    <!-- Neck Tube Right -->
+    <path d="M 327 270 C 342 320 327 410 282 425 C 262 432 256 420 256 405" fill="none" stroke="url(#stethoTube)" stroke-width="14" stroke-linecap="round"/>
+
+    <!-- Metal Earpieces going up into neck -->
+    <path d="M 185 270 Q 180 250 190 238" fill="none" stroke="url(#stethoMetal)" stroke-width="8" stroke-linecap="round"/>
+    <path d="M 327 270 Q 332 250 322 238" fill="none" stroke="url(#stethoMetal)" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="190" cy="236" r="6" fill="#0284c7"/>
+    <circle cx="322" cy="236" r="6" fill="#0284c7"/>
+
+    <!-- Stethoscope Central Tube & Chestpiece (Campana del Fonendo) -->
+    <path d="M 256 415 L 256 445" fill="none" stroke="url(#stethoTube)" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="256" cy="456" r="24" fill="url(#stethoMetal)"/>
+    <circle cx="256" cy="456" r="18" fill="#0284c7"/>
+    <circle cx="256" cy="456" r="14" fill="#38bdf8"/>
+    <circle cx="256" cy="456" r="6" fill="#ffffff" opacity="0.9"/>
+  </g>
+
+  <!-- Little Doctor Mirror / Headband or Medical Sparkle -->
+  <path d="M 256 100 Q 256 115 245 125 Q 256 125 256 140 Q 256 125 267 125 Q 256 115 256 100" fill="#facc15"/>
+</svg>

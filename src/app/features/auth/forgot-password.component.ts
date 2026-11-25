@@ -11,8 +11,12 @@ import { ToastService } from '../../core/services/toast.service';
   template: `
     <div class="min-h-screen bg-gradient-to-br from-slate-50 via-sky-50/30 to-teal-50/40 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div class="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-sky-600 to-teal-500 text-white shadow-lg mb-3">
-          <i class="fa-solid fa-key text-2xl"></i>
+        <div class="inline-block relative mb-2">
+          <img
+            src="docsaurio-logo.svg"
+            alt="DocSaurio Mascota"
+            class="w-20 h-20 mx-auto drop-shadow-md hover:scale-105 transition-transform"
+          />
         </div>
         <h2 class="text-2xl font-bold text-slate-900">Recuperación de Contraseña</h2>
         <p class="mt-1 text-xs text-slate-600">
@@ -68,6 +72,14 @@ import { ToastService } from '../../core/services/toast.service';
           </div>
 
         </div>
+
+        <!-- Footer Credits -->
+        <p class="mt-6 text-center text-xs text-slate-500 flex items-center justify-center gap-1.5">
+          <span>Created by</span>
+          <span class="font-semibold text-slate-700">Royer Sarmiento</span>
+          <span class="text-slate-400">&</span>
+          <span class="font-semibold text-slate-700">Luis Eraso</span>
+        </p>
       </div>
     </div>
   `,

@@ -23,7 +23,7 @@ import { AiAssistantService, AiGeneratedDraft } from '../../../core/services/ai-
               <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
                 Asistente Clínico Inteligente
                 <span class="text-[10px] font-semibold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full border border-purple-200">
-                  NovaMed AI Copilot
+                  DocSaurio AI Copilot 🦖
                 </span>
               </h3>
               <p class="text-xs text-slate-500">
@@ -206,7 +206,7 @@ import { AiAssistantService, AiGeneratedDraft } from '../../../core/services/ai-
                 <div class="space-y-3">
                   <div class="p-3.5 rounded-xl bg-purple-50/50 border border-purple-200">
                     <span class="text-[11px] font-semibold text-purple-800 uppercase tracking-wider block mb-1">
-                      Versión Optimizada por NovaMed AI:
+                      Versión Optimizada por Med Note AI:
                     </span>
                     <pre class="text-xs font-mono text-slate-800 bg-white p-3 rounded-lg border border-purple-100 whitespace-pre-wrap">{{ improvedText() }}</pre>
                   </div>

@@ -115,7 +115,7 @@ import { MedicalDataService } from '../../../core/services/medical-data.service'
         <!-- Footer -->
         <div class="px-4 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
           <span>Presiona <kbd class="font-mono bg-white border border-slate-200 px-1 rounded">Enter</kbd> para seleccionar</span>
-          <span>Royer NovaMed Search</span>
+          <span>DocSaurio Search</span>
         </div>
 
       </div>

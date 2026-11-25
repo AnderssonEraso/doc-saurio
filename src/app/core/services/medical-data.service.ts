@@ -1,34 +1,24 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, effect } from '@angular/core';
 import { Category } from '../models/category.model';
 import { Disease } from '../models/disease.model';
 import { Treatment } from '../models/treatment.model';
 import { Recommendation, RecommendationType } from '../models/recommendation.model';
-import {
-  INITIAL_CATEGORIES,
-  INITIAL_DISEASES,
-  INITIAL_TREATMENTS,
-  INITIAL_RECOMMENDATIONS,
-} from '../mocks/mock-data';
+import { ClinicalNote } from '../models/note.model';
 import { ToastService } from './toast.service';
-
-const STORAGE_KEYS = {
-  CATEGORIES: 'novamed_categories_v1',
-  DISEASES: 'novamed_diseases_v1',
-  TREATMENTS: 'novamed_treatments_v1',
-  RECOMMENDATIONS: 'novamed_recommendations_v1',
-};
+import { SupabaseService } from './supabase.service';
+import { AuthService } from './auth.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class MedicalDataService {
-  // Primary reactive state
-  public readonly categories = signal<Category[]>(this.loadStorage(STORAGE_KEYS.CATEGORIES, INITIAL_CATEGORIES));
-  public readonly diseases = signal<Disease[]>(this.loadStorage(STORAGE_KEYS.DISEASES, INITIAL_DISEASES));
-  public readonly treatments = signal<Treatment[]>(this.loadStorage(STORAGE_KEYS.TREATMENTS, INITIAL_TREATMENTS));
-  public readonly recommendations = signal<Recommendation[]>(
-    this.loadStorage(STORAGE_KEYS.RECOMMENDATIONS, INITIAL_RECOMMENDATIONS)
-  );
+  // Primary reactive state directly from Supabase (no mock data)
+  public readonly categories = signal<Category[]>([]);
+  public readonly diseases = signal<Disease[]>([]);
+  public readonly treatments = signal<Treatment[]>([]);
+  public readonly recommendations = signal<Recommendation[]>([]);
+  public readonly clinicalNotes = signal<ClinicalNote[]>([]);
+  public readonly isLoading = signal<boolean>(false);
 
   // Active filters and selection state
   public readonly selectedCategoryId = signal<string | null>(null);
@@ -137,7 +127,7 @@ export class MedicalDataService {
         matches.push({
           type: 'treatment',
           title: t.name,
-          subtitle: `Enfermedad: ${disease?.name || 'N/A'} • ${t.duration}`,
+          subtitle: `Patología: ${disease?.name || 'N/A'} • ${t.duration}`,
           diseaseId: t.diseaseId,
           treatmentId: t.id,
         });
@@ -147,42 +137,146 @@ export class MedicalDataService {
     return matches.slice(0, 8);
   });
 
-  constructor(private toast: ToastService) {
-    // Select first category and disease on start if none selected
-    const initialDis = this.diseases()[0];
-    if (initialDis) {
-      this.selectedDiseaseId.set(initialDis.id);
-      this.selectedCategoryId.set(null); // 'all'
-    }
+  constructor(
+    private toast: ToastService,
+    private supabase: SupabaseService,
+    private auth: AuthService
+  ) {
+    // Escuchar cambios de autenticación para cargar los datos del usuario
+    effect(() => {
+      const user = this.auth.currentUser();
+      if (user) {
+        this.loadMedicalData();
+      } else {
+        this.clearData();
+      }
+    });
   }
 
-  // LocalStorage Helper
-  private loadStorage<T>(key: string, fallback: T[]): T[] {
-    try {
-      const data = localStorage.getItem(key);
-      return data ? JSON.parse(data) : fallback;
-    } catch {
-      return fallback;
-    }
+  private clearData(): void {
+    this.categories.set([]);
+    this.diseases.set([]);
+    this.treatments.set([]);
+    this.recommendations.set([]);
+    this.clinicalNotes.set([]);
+    this.selectedCategoryId.set(null);
+    this.selectedDiseaseId.set(null);
+    this.selectedTreatmentId.set(null);
   }
 
-  private saveStorage<T>(key: string, data: T[]): void {
+  /**
+   * Carga todos los datos clínicos del usuario actual desde las tablas de Supabase
+   */
+  async loadMedicalData(): Promise<void> {
+    const user = this.auth.currentUser();
+    if (!user) return;
+
+    this.isLoading.set(true);
     try {
-      localStorage.setItem(key, JSON.stringify(data));
-    } catch (e) {
-      console.warn('LocalStorage error:', e);
+      // Supabase RLS filtra automáticamente solo los datos donde user_id = auth.uid()
+      const [catRes, disRes, treatRes, recRes, notesRes] = await Promise.all([
+        this.supabase.client.from('categories').select('*').order('name'),
+        this.supabase.client.from('diseases').select('*').order('name'),
+        this.supabase.client.from('treatments').select('*').order('created_at'),
+        this.supabase.client.from('recommendations').select('*').order('order'),
+        this.supabase.client.from('clinical_notes').select('*').order('created_at', { ascending: false }),
+      ]);
+
+      if (catRes.data) {
+        const mappedCategories: Category[] = catRes.data.map(c => ({
+          id: c.id,
+          userId: c.user_id,
+          name: c.name,
+          description: c.description,
+          color: c.color,
+          icon: c.icon,
+          createdAt: c.created_at,
+        }));
+        this.categories.set(mappedCategories);
+      }
+
+      if (disRes.data) {
+        const mappedDiseases: Disease[] = disRes.data.map(d => ({
+          id: d.id,
+          userId: d.user_id,
+          categoryId: d.category_id || '',
+          name: d.name,
+          code: d.code,
+          description: d.description,
+          severity: d.severity,
+          createdAt: d.created_at,
+        }));
+        this.diseases.set(mappedDiseases);
+
+        // Seleccionar la primera patología si existe
+        if (mappedDiseases.length > 0 && !this.selectedDiseaseId()) {
+          this.selectedDiseaseId.set(mappedDiseases[0].id);
+        }
+      }
+
+      if (treatRes.data) {
+        const mappedTreatments: Treatment[] = treatRes.data.map(t => ({
+          id: t.id,
+          userId: t.user_id,
+          diseaseId: t.disease_id || '',
+          name: t.name,
+          regimen: t.regimen,
+          duration: t.duration,
+          clinicalNotes: t.clinical_notes || undefined,
+          createdAt: t.created_at,
+          updatedAt: t.updated_at,
+        }));
+        this.treatments.set(mappedTreatments);
+      }
+
+      if (recRes.data) {
+        const mappedRecs: Recommendation[] = recRes.data.map(r => ({
+          id: r.id,
+          userId: r.user_id,
+          treatmentId: r.treatment_id || '',
+          type: r.type,
+          title: r.title,
+          description: r.description,
+          order: r.order,
+          createdAt: r.created_at,
+        }));
+        this.recommendations.set(mappedRecs);
+      }
+
+      if (notesRes.data) {
+        const mappedNotes: ClinicalNote[] = notesRes.data.map(n => ({
+          id: n.id,
+          userId: n.user_id,
+          treatmentId: n.treatment_id || undefined,
+          diseaseId: n.disease_id || undefined,
+          patientReference: n.patient_reference || undefined,
+          title: n.title,
+          content: n.content,
+          noteType: n.note_type,
+          isPinned: n.is_pinned,
+          createdAt: n.created_at,
+          updatedAt: n.updated_at,
+        }));
+        this.clinicalNotes.set(mappedNotes);
+      }
+    } catch (err) {
+      console.error('Error cargando datos de Supabase:', err);
+    } finally {
+      this.isLoading.set(false);
     }
   }
 
   // Selection actions
   selectCategory(categoryId: string | null): void {
     this.selectedCategoryId.set(categoryId);
-    // If filtered diseases does not include current active disease, select first in category
     const available = categoryId
       ? this.diseases().filter(d => d.categoryId === categoryId)
       : this.diseases();
     if (available.length > 0) {
       this.selectedDiseaseId.set(available[0].id);
+      this.selectedTreatmentId.set(null);
+    } else {
+      this.selectedDiseaseId.set(null);
       this.selectedTreatmentId.set(null);
     }
   }
@@ -197,176 +291,404 @@ export class MedicalDataService {
   }
 
   // --- CRUD: Categories ---
-  addCategory(category: Omit<Category, 'id' | 'createdAt'>): Category {
-    const newCat: Category = {
-      ...category,
-      id: `cat-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-    };
-    const updated = [...this.categories(), newCat];
-    this.categories.set(updated);
-    this.saveStorage(STORAGE_KEYS.CATEGORIES, updated);
-    this.toast.success('Categoría creada', `Se añadió la categoría "${newCat.name}"`);
-    return newCat;
+  async addCategory(category: Omit<Category, 'id' | 'createdAt'>): Promise<Category | null> {
+    const user = this.auth.currentUser();
+    if (!user) return null;
+
+    const id = `cat-${Date.now()}`;
+    const now = new Date().toISOString();
+
+    try {
+      const { data, error } = await this.supabase.client
+        .from('categories')
+        .insert({
+          id,
+          user_id: user.id,
+          name: category.name,
+          description: category.description,
+          color: category.color,
+          icon: category.icon,
+          created_at: now,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        this.toast.error('Error al guardar', error.message);
+        return null;
+      }
+
+      const newCat: Category = {
+        id: data.id,
+        userId: data.user_id,
+        name: data.name,
+        description: data.description,
+        color: data.color,
+        icon: data.icon,
+        createdAt: data.created_at,
+      };
+
+      this.categories.set([...this.categories(), newCat]);
+      this.toast.success('Categoría creada', `Se añadió la categoría "${newCat.name}"`);
+      return newCat;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al guardar categoría';
+      this.toast.error('Error', message);
+      return null;
+    }
   }
 
-  updateCategory(category: Category): void {
-    const updated = this.categories().map(c => (c.id === category.id ? category : c));
-    this.categories.set(updated);
-    this.saveStorage(STORAGE_KEYS.CATEGORIES, updated);
-    this.toast.success('Categoría actualizada', `Categoría "${category.name}" modificada correctamente`);
+  async updateCategory(category: Category): Promise<void> {
+    try {
+      const { error } = await this.supabase.client
+        .from('categories')
+        .update({
+          name: category.name,
+          description: category.description,
+          color: category.color,
+          icon: category.icon,
+        })
+        .eq('id', category.id);
+
+      if (error) {
+        this.toast.error('Error', error.message);
+        return;
+      }
+
+      this.categories.set(this.categories().map(c => (c.id === category.id ? category : c)));
+      this.toast.success('Categoría actualizada', `Categoría "${category.name}" modificada correctamente`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al actualizar categoría';
+      this.toast.error('Error', message);
+    }
   }
 
-  deleteCategory(categoryId: string): void {
+  async deleteCategory(categoryId: string): Promise<void> {
     const category = this.categories().find(c => c.id === categoryId);
-    // Delete cascade: diseases, treatments, recommendations
-    const relatedDiseases = this.diseases().filter(d => d.categoryId === categoryId);
-    const relatedDiseaseIds = new Set(relatedDiseases.map(d => d.id));
+    try {
+      const { error } = await this.supabase.client
+        .from('categories')
+        .delete()
+        .eq('id', categoryId);
 
-    const relatedTreatments = this.treatments().filter(t => relatedDiseaseIds.has(t.diseaseId));
-    const relatedTreatmentIds = new Set(relatedTreatments.map(t => t.id));
+      if (error) {
+        this.toast.error('Error', error.message);
+        return;
+      }
 
-    const updatedCategories = this.categories().filter(c => c.id !== categoryId);
-    const updatedDiseases = this.diseases().filter(d => !relatedDiseaseIds.has(d.id));
-    const updatedTreatments = this.treatments().filter(t => !relatedTreatmentIds.has(t.id));
-    const updatedRecommendations = this.recommendations().filter(r => !relatedTreatmentIds.has(r.treatmentId));
+      // Supabase cascade deletes linked diseases, treatments, recommendations
+      await this.loadMedicalData();
 
-    this.categories.set(updatedCategories);
-    this.diseases.set(updatedDiseases);
-    this.treatments.set(updatedTreatments);
-    this.recommendations.set(updatedRecommendations);
+      if (this.selectedCategoryId() === categoryId) {
+        this.selectedCategoryId.set(null);
+      }
 
-    this.saveStorage(STORAGE_KEYS.CATEGORIES, updatedCategories);
-    this.saveStorage(STORAGE_KEYS.DISEASES, updatedDiseases);
-    this.saveStorage(STORAGE_KEYS.TREATMENTS, updatedTreatments);
-    this.saveStorage(STORAGE_KEYS.RECOMMENDATIONS, updatedRecommendations);
-
-    if (this.selectedCategoryId() === categoryId) {
-      this.selectedCategoryId.set(null);
+      this.toast.info('Categoría eliminada', `Se eliminó "${category?.name || 'Categoría'}"`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al eliminar categoría';
+      this.toast.error('Error', message);
     }
-    if (updatedDiseases.length > 0) {
-      this.selectedDiseaseId.set(updatedDiseases[0].id);
-    }
-
-    this.toast.info('Categoría eliminada', `Se eliminó "${category?.name || 'Categoría'}" y sus patologías asociadas`);
   }
 
   // --- CRUD: Diseases ---
-  addDisease(disease: Omit<Disease, 'id' | 'createdAt'>): Disease {
-    const newDis: Disease = {
-      ...disease,
-      id: `dis-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-    };
-    const updated = [...this.diseases(), newDis];
-    this.diseases.set(updated);
-    this.saveStorage(STORAGE_KEYS.DISEASES, updated);
-    this.selectedDiseaseId.set(newDis.id);
-    this.toast.success('Patología registrada', `Se agregó "${newDis.name}" exitosamente`);
-    return newDis;
-  }
+  async addDisease(disease: Omit<Disease, 'id' | 'createdAt'>): Promise<Disease | null> {
+    const user = this.auth.currentUser();
+    if (!user) return null;
 
-  updateDisease(disease: Disease): void {
-    const updated = this.diseases().map(d => (d.id === disease.id ? disease : d));
-    this.diseases.set(updated);
-    this.saveStorage(STORAGE_KEYS.DISEASES, updated);
-    this.toast.success('Patología actualizada', `Cambios guardados en "${disease.name}"`);
-  }
+    const id = `dis-${Date.now()}`;
+    const now = new Date().toISOString();
 
-  deleteDisease(diseaseId: string): void {
-    const disease = this.diseases().find(d => d.id === diseaseId);
-    const relatedTreatments = this.treatments().filter(t => t.diseaseId === diseaseId);
-    const relatedTreatmentIds = new Set(relatedTreatments.map(t => t.id));
+    try {
+      const { data, error } = await this.supabase.client
+        .from('diseases')
+        .insert({
+          id,
+          user_id: user.id,
+          category_id: disease.categoryId,
+          name: disease.name,
+          code: disease.code,
+          description: disease.description,
+          severity: disease.severity,
+          created_at: now,
+        })
+        .select()
+        .single();
 
-    const updatedDiseases = this.diseases().filter(d => d.id !== diseaseId);
-    const updatedTreatments = this.treatments().filter(t => t.diseaseId !== diseaseId);
-    const updatedRecommendations = this.recommendations().filter(r => !relatedTreatmentIds.has(r.treatmentId));
+      if (error) {
+        this.toast.error('Error al guardar', error.message);
+        return null;
+      }
 
-    this.diseases.set(updatedDiseases);
-    this.treatments.set(updatedTreatments);
-    this.recommendations.set(updatedRecommendations);
+      const newDis: Disease = {
+        id: data.id,
+        userId: data.user_id,
+        categoryId: data.category_id || '',
+        name: data.name,
+        code: data.code,
+        description: data.description,
+        severity: data.severity,
+        createdAt: data.created_at,
+      };
 
-    this.saveStorage(STORAGE_KEYS.DISEASES, updatedDiseases);
-    this.saveStorage(STORAGE_KEYS.TREATMENTS, updatedTreatments);
-    this.saveStorage(STORAGE_KEYS.RECOMMENDATIONS, updatedRecommendations);
-
-    if (updatedDiseases.length > 0) {
-      this.selectedDiseaseId.set(updatedDiseases[0].id);
+      this.diseases.set([...this.diseases(), newDis]);
+      this.selectedDiseaseId.set(newDis.id);
+      this.toast.success('Patología registrada', `Se agregó "${newDis.name}" exitosamente`);
+      return newDis;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al guardar patología';
+      this.toast.error('Error', message);
+      return null;
     }
-    this.toast.info('Patología eliminada', `"${disease?.name || 'Patología'}" ha sido removida`);
+  }
+
+  async updateDisease(disease: Disease): Promise<void> {
+    try {
+      const { error } = await this.supabase.client
+        .from('diseases')
+        .update({
+          category_id: disease.categoryId,
+          name: disease.name,
+          code: disease.code,
+          description: disease.description,
+          severity: disease.severity,
+        })
+        .eq('id', disease.id);
+
+      if (error) {
+        this.toast.error('Error', error.message);
+        return;
+      }
+
+      this.diseases.set(this.diseases().map(d => (d.id === disease.id ? disease : d)));
+      this.toast.success('Patología actualizada', `Cambios guardados en "${disease.name}"`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al actualizar patología';
+      this.toast.error('Error', message);
+    }
+  }
+
+  async deleteDisease(diseaseId: string): Promise<void> {
+    const disease = this.diseases().find(d => d.id === diseaseId);
+    try {
+      const { error } = await this.supabase.client
+        .from('diseases')
+        .delete()
+        .eq('id', diseaseId);
+
+      if (error) {
+        this.toast.error('Error', error.message);
+        return;
+      }
+
+      await this.loadMedicalData();
+      this.toast.info('Patología eliminada', `"${disease?.name || 'Patología'}" ha sido removida`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al eliminar patología';
+      this.toast.error('Error', message);
+    }
   }
 
   // --- CRUD: Treatments ---
-  addTreatment(treatment: Omit<Treatment, 'id' | 'createdAt' | 'updatedAt'>): Treatment {
+  async addTreatment(treatment: Omit<Treatment, 'id' | 'createdAt' | 'updatedAt'>): Promise<Treatment | null> {
+    const user = this.auth.currentUser();
+    if (!user) return null;
+
+    const id = `treat-${Date.now()}`;
     const now = new Date().toISOString();
-    const newTreat: Treatment = {
-      ...treatment,
-      id: `treat-${Date.now()}`,
-      createdAt: now,
-      updatedAt: now,
-    };
-    const updated = [...this.treatments(), newTreat];
-    this.treatments.set(updated);
-    this.saveStorage(STORAGE_KEYS.TREATMENTS, updated);
-    this.selectedTreatmentId.set(newTreat.id);
-    this.toast.success('Esquema guardado', `Se registró el esquema "${newTreat.name}"`);
-    return newTreat;
+
+    try {
+      const { data, error } = await this.supabase.client
+        .from('treatments')
+        .insert({
+          id,
+          user_id: user.id,
+          disease_id: treatment.diseaseId,
+          name: treatment.name,
+          regimen: treatment.regimen,
+          duration: treatment.duration,
+          clinical_notes: treatment.clinicalNotes || null,
+          created_at: now,
+          updated_at: now,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        this.toast.error('Error al guardar', error.message);
+        return null;
+      }
+
+      const newTreat: Treatment = {
+        id: data.id,
+        userId: data.user_id,
+        diseaseId: data.disease_id || '',
+        name: data.name,
+        regimen: data.regimen,
+        duration: data.duration,
+        clinicalNotes: data.clinical_notes || undefined,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+      };
+
+      this.treatments.set([...this.treatments(), newTreat]);
+      this.selectedTreatmentId.set(newTreat.id);
+      this.toast.success('Esquema guardado', `Se registró el esquema "${newTreat.name}"`);
+      return newTreat;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al guardar tratamiento';
+      this.toast.error('Error', message);
+      return null;
+    }
   }
 
-  updateTreatment(treatment: Treatment): void {
-    const updated = this.treatments().map(t =>
-      t.id === treatment.id ? { ...treatment, updatedAt: new Date().toISOString() } : t
-    );
-    this.treatments.set(updated);
-    this.saveStorage(STORAGE_KEYS.TREATMENTS, updated);
-    this.toast.success('Tratamiento actualizado', `Cambios guardados en "${treatment.name}"`);
+  async updateTreatment(treatment: Treatment): Promise<void> {
+    const now = new Date().toISOString();
+    try {
+      const { error } = await this.supabase.client
+        .from('treatments')
+        .update({
+          name: treatment.name,
+          regimen: treatment.regimen,
+          duration: treatment.duration,
+          clinical_notes: treatment.clinicalNotes || null,
+          updated_at: now,
+        })
+        .eq('id', treatment.id);
+
+      if (error) {
+        this.toast.error('Error', error.message);
+        return;
+      }
+
+      this.treatments.set(
+        this.treatments().map(t => (t.id === treatment.id ? { ...treatment, updatedAt: now } : t))
+      );
+      this.toast.success('Tratamiento actualizado', `Cambios guardados en "${treatment.name}"`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al actualizar tratamiento';
+      this.toast.error('Error', message);
+    }
   }
 
-  deleteTreatment(treatmentId: string): void {
+  async deleteTreatment(treatmentId: string): Promise<void> {
     const treat = this.treatments().find(t => t.id === treatmentId);
-    const updatedTreatments = this.treatments().filter(t => t.id !== treatmentId);
-    const updatedRecommendations = this.recommendations().filter(r => r.treatmentId !== treatmentId);
+    try {
+      const { error } = await this.supabase.client
+        .from('treatments')
+        .delete()
+        .eq('id', treatmentId);
 
-    this.treatments.set(updatedTreatments);
-    this.recommendations.set(updatedRecommendations);
+      if (error) {
+        this.toast.error('Error', error.message);
+        return;
+      }
 
-    this.saveStorage(STORAGE_KEYS.TREATMENTS, updatedTreatments);
-    this.saveStorage(STORAGE_KEYS.RECOMMENDATIONS, updatedRecommendations);
-
-    this.selectedTreatmentId.set(null);
-    this.toast.info('Esquema eliminado', `Se eliminó "${treat?.name || 'Esquema'}"`);
+      await this.loadMedicalData();
+      this.selectedTreatmentId.set(null);
+      this.toast.info('Esquema eliminado', `Se eliminó "${treat?.name || 'Esquema'}"`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al eliminar tratamiento';
+      this.toast.error('Error', message);
+    }
   }
 
   // --- CRUD: Recommendations ---
-  addRecommendation(rec: Omit<Recommendation, 'id' | 'createdAt'>): Recommendation {
-    const newRec: Recommendation = {
-      ...rec,
-      id: `rec-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-    };
-    const updated = [...this.recommendations(), newRec];
-    this.recommendations.set(updated);
-    this.saveStorage(STORAGE_KEYS.RECOMMENDATIONS, updated);
-    this.toast.success('Recomendación agregada', `Se añadió "${newRec.title}"`);
-    return newRec;
+  async addRecommendation(rec: Omit<Recommendation, 'id' | 'createdAt'>): Promise<Recommendation | null> {
+    const user = this.auth.currentUser();
+    if (!user) return null;
+
+    const id = `rec-${Date.now()}`;
+    const now = new Date().toISOString();
+
+    try {
+      const { data, error } = await this.supabase.client
+        .from('recommendations')
+        .insert({
+          id,
+          user_id: user.id,
+          treatment_id: rec.treatmentId,
+          type: rec.type,
+          title: rec.title,
+          description: rec.description,
+          order: rec.order,
+          created_at: now,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        this.toast.error('Error al guardar', error.message);
+        return null;
+      }
+
+      const newRec: Recommendation = {
+        id: data.id,
+        userId: data.user_id,
+        treatmentId: data.treatment_id || '',
+        type: data.type,
+        title: data.title,
+        description: data.description,
+        order: data.order,
+        createdAt: data.created_at,
+      };
+
+      this.recommendations.set([...this.recommendations(), newRec]);
+      this.toast.success('Recomendación agregada', `Se añadió "${newRec.title}"`);
+      return newRec;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al guardar recomendación';
+      this.toast.error('Error', message);
+      return null;
+    }
   }
 
-  updateRecommendation(rec: Recommendation): void {
-    const updated = this.recommendations().map(r => (r.id === rec.id ? rec : r));
-    this.recommendations.set(updated);
-    this.saveStorage(STORAGE_KEYS.RECOMMENDATIONS, updated);
-    this.toast.success('Recomendación modificada', `"${rec.title}" actualizada`);
+  async updateRecommendation(rec: Recommendation): Promise<void> {
+    try {
+      const { error } = await this.supabase.client
+        .from('recommendations')
+        .update({
+          type: rec.type,
+          title: rec.title,
+          description: rec.description,
+          order: rec.order,
+        })
+        .eq('id', rec.id);
+
+      if (error) {
+        this.toast.error('Error', error.message);
+        return;
+      }
+
+      this.recommendations.set(this.recommendations().map(r => (r.id === rec.id ? rec : r)));
+      this.toast.success('Recomendación modificada', `"${rec.title}" actualizada`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al modificar recomendación';
+      this.toast.error('Error', message);
+    }
   }
 
-  deleteRecommendation(recId: string): void {
+  async deleteRecommendation(recId: string): Promise<void> {
     const rec = this.recommendations().find(r => r.id === recId);
-    const updated = this.recommendations().filter(r => r.id !== recId);
-    this.recommendations.set(updated);
-    this.saveStorage(STORAGE_KEYS.RECOMMENDATIONS, updated);
-    this.toast.info('Recomendación eliminada', `Se eliminó "${rec?.title || 'Recomendación'}"`);
+    try {
+      const { error } = await this.supabase.client
+        .from('recommendations')
+        .delete()
+        .eq('id', recId);
+
+      if (error) {
+        this.toast.error('Error', error.message);
+        return;
+      }
+
+      this.recommendations.set(this.recommendations().filter(r => r.id !== recId));
+      this.toast.info('Recomendación eliminada', `Se eliminó "${rec?.title || 'Recomendación'}"`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al eliminar recomendación';
+      this.toast.error('Error', message);
+    }
   }
 
-  moveRecommendation(recId: string, direction: 'up' | 'down'): void {
+  async moveRecommendation(recId: string, direction: 'up' | 'down'): Promise<void> {
     const treatment = this.activeTreatment();
     if (!treatment) return;
 
@@ -377,45 +699,89 @@ export class MedicalDataService {
     const index = list.findIndex(r => r.id === recId);
     if (index === -1) return;
 
+    let targetIndex = -1;
     if (direction === 'up' && index > 0) {
-      const prev = list[index - 1];
-      const curr = list[index];
-      const tempOrder = prev.order;
-      prev.order = curr.order;
-      curr.order = tempOrder;
+      targetIndex = index - 1;
     } else if (direction === 'down' && index < list.length - 1) {
-      const next = list[index + 1];
-      const curr = list[index];
-      const tempOrder = next.order;
-      next.order = curr.order;
-      curr.order = tempOrder;
+      targetIndex = index + 1;
     }
 
-    const updated = this.recommendations().map(r => {
-      const matched = list.find(item => item.id === r.id);
-      return matched ? { ...matched } : r;
-    });
+    if (targetIndex === -1) return;
 
-    this.recommendations.set(updated);
-    this.saveStorage(STORAGE_KEYS.RECOMMENDATIONS, updated);
+    const itemA = list[index];
+    const itemB = list[targetIndex];
+    const tempOrder = itemA.order;
+    itemA.order = itemB.order;
+    itemB.order = tempOrder;
+
+    // Actualizar en base de datos
+    await Promise.all([
+      this.supabase.client.from('recommendations').update({ order: itemA.order }).eq('id', itemA.id),
+      this.supabase.client.from('recommendations').update({ order: itemB.order }).eq('id', itemB.id),
+    ]);
+
+    this.recommendations.set(
+      this.recommendations().map(r => {
+        if (r.id === itemA.id) return { ...r, order: itemA.order };
+        if (r.id === itemB.id) return { ...r, order: itemB.order };
+        return r;
+      })
+    );
   }
 
-  // Restore defaults
-  restoreDefaultData(): void {
-    localStorage.removeItem(STORAGE_KEYS.CATEGORIES);
-    localStorage.removeItem(STORAGE_KEYS.DISEASES);
-    localStorage.removeItem(STORAGE_KEYS.TREATMENTS);
-    localStorage.removeItem(STORAGE_KEYS.RECOMMENDATIONS);
+  // --- CRUD: Clinical Notes ---
+  async addClinicalNote(note: Omit<ClinicalNote, 'id' | 'createdAt' | 'updatedAt'>): Promise<ClinicalNote | null> {
+    const user = this.auth.currentUser();
+    if (!user) return null;
 
-    this.categories.set(INITIAL_CATEGORIES);
-    this.diseases.set(INITIAL_DISEASES);
-    this.treatments.set(INITIAL_TREATMENTS);
-    this.recommendations.set(INITIAL_RECOMMENDATIONS);
+    const id = `note-${Date.now()}`;
+    const now = new Date().toISOString();
 
-    this.selectedCategoryId.set(null);
-    this.selectedDiseaseId.set(INITIAL_DISEASES[0].id);
-    this.selectedTreatmentId.set(null);
+    try {
+      const { data, error } = await this.supabase.client
+        .from('clinical_notes')
+        .insert({
+          id,
+          user_id: user.id,
+          treatment_id: note.treatmentId || null,
+          disease_id: note.diseaseId || null,
+          patient_reference: note.patientReference || null,
+          title: note.title,
+          content: note.content,
+          note_type: note.noteType,
+          is_pinned: note.isPinned,
+          created_at: now,
+          updated_at: now,
+        })
+        .select()
+        .single();
 
-    this.toast.success('Datos restablecidos', 'Se recargaron los esquemas clínicos y categorías originales de demostración');
+      if (error) {
+        this.toast.error('Error', error.message);
+        return null;
+      }
+
+      const newNote: ClinicalNote = {
+        id: data.id,
+        userId: data.user_id,
+        treatmentId: data.treatment_id || undefined,
+        diseaseId: data.disease_id || undefined,
+        patientReference: data.patient_reference || undefined,
+        title: data.title,
+        content: data.content,
+        noteType: data.note_type,
+        isPinned: data.is_pinned,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+      };
+
+      this.clinicalNotes.set([newNote, ...this.clinicalNotes()]);
+      this.toast.success('Nota clínica guardada', `Se añadió la nota "${newNote.title}"`);
+      return newNote;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al guardar nota';
+      this.toast.error('Error', message);
+      return null;
+    }
   }
 }
