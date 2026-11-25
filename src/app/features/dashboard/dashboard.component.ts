@@ -41,10 +41,123 @@ import { ConfirmDialogModalComponent } from './components/confirm-dialog-modal.c
   template: `
     <div class="min-h-screen bg-slate-50 flex flex-col font-sans selection:bg-teal-500 selection:text-white">
       
+      <!-- Mobile Drawer Navigation -->
+      @if (mobileMenuOpen()) {
+        <div class="fixed inset-0 z-50 lg:hidden flex">
+          <!-- Backdrop -->
+          <div
+            class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+            (click)="mobileMenuOpen.set(false)"
+          ></div>
+
+          <!-- Slide Drawer -->
+          <div class="relative flex-1 flex flex-col max-w-xs w-full bg-white shadow-2xl z-10 p-5 animate-in slide-in-from-left duration-200">
+            <!-- Header -->
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div class="flex items-center gap-2.5">
+                <img src="docsaurio-logo.svg" alt="DocSaurio" class="w-9 h-9 object-contain" />
+                <div>
+                  <h3 class="font-extrabold text-slate-900 text-sm">Doc<span class="text-emerald-600">Saurio</span> 🩺</h3>
+                  <p class="text-[10px] text-emerald-700 font-semibold uppercase">Notas Clínicas</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                (click)="mobileMenuOpen.set(false)"
+                class="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 cursor-pointer"
+              >
+                <i class="fa-solid fa-xmark text-lg"></i>
+              </button>
+            </div>
+
+            <!-- Doctor Profile Card in Drawer -->
+            <div class="my-4 p-3 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-3">
+              <img
+                [src]="auth.currentUser()?.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + auth.currentUser()?.name"
+                [alt]="auth.currentUser()?.name"
+                class="w-10 h-10 rounded-full border border-slate-200 object-cover"
+              />
+              <div class="min-w-0 flex-1">
+                <p class="text-xs font-bold text-slate-900 truncate">{{ auth.currentUser()?.name }}</p>
+                <p class="text-[10px] text-slate-500 truncate">{{ auth.currentUser()?.email }}</p>
+                <span
+                  class="inline-block mt-0.5 text-[9px] font-semibold uppercase px-2 py-0.5 rounded-full"
+                  [ngClass]="auth.isAdmin() ? 'bg-amber-100 text-amber-800' : 'bg-teal-100 text-teal-800'"
+                >
+                  {{ auth.currentUser()?.specialty || (auth.isAdmin() ? 'Administrador' : 'Médico') }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Quick Actions Navigation -->
+            <div class="space-y-1.5 flex-1 overflow-y-auto">
+              <button
+                type="button"
+                (click)="mobileTab.set('list'); mobileMenuOpen.set(false)"
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer"
+              >
+                <i class="fa-solid fa-book-medical text-teal-600 w-5"></i>
+                <span>Ver Patologías Clínicas</span>
+              </button>
+
+              <button
+                type="button"
+                (click)="openNewDiseaseModal(); mobileMenuOpen.set(false)"
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer"
+              >
+                <i class="fa-solid fa-plus-circle text-sky-600 w-5"></i>
+                <span>Registrar Patología</span>
+              </button>
+
+              <button
+                type="button"
+                (click)="openNewCategoryModal(); mobileMenuOpen.set(false)"
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer"
+              >
+                <i class="fa-solid fa-folder-plus text-emerald-600 w-5"></i>
+                <span>Nueva Especialidad</span>
+              </button>
+
+              <button
+                type="button"
+                (click)="showSearchModal.set(true); mobileMenuOpen.set(false)"
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer"
+              >
+                <i class="fa-solid fa-magnifying-glass text-indigo-600 w-5"></i>
+                <span>Buscar (Ctrl + K)</span>
+              </button>
+
+              @if (auth.isAdmin()) {
+                <button
+                  type="button"
+                  (click)="showUserManagementModal.set(true); mobileMenuOpen.set(false)"
+                  class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-amber-900 bg-amber-50 hover:bg-amber-100 cursor-pointer"
+                >
+                  <i class="fa-solid fa-users-gear text-amber-600 w-5"></i>
+                  <span>Gestión de Usuarios</span>
+                </button>
+              }
+            </div>
+
+            <!-- Drawer Footer: Logout -->
+            <div class="pt-4 border-t border-slate-100 mt-auto">
+              <button
+                type="button"
+                (click)="auth.logout(); mobileMenuOpen.set(false)"
+                class="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 transition cursor-pointer"
+              >
+                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                <span>Cerrar Sesión</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
       <!-- Top Navigation Header -->
       <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div class="flex items-center justify-between h-16 gap-4">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div class="flex items-center justify-between h-16 gap-2 sm:gap-4">
             
             <!-- Brand -->
             <div class="flex items-center gap-3">
@@ -142,9 +255,9 @@ import { ConfirmDialogModalComponent } from './components/confirm-dialog-modal.c
       </header>
 
       <!-- Subheader: Horizontal Categories Quick Bar -->
-      <section class="bg-white border-b border-slate-200/60 py-2.5 px-4 sm:px-6 lg:px-8">
-        <div class="max-w-7xl mx-auto flex items-center justify-between gap-3 overflow-x-auto pb-1 sm:pb-0">
-          <div class="flex items-center gap-1.5">
+      <section class="bg-white border-b border-slate-200/60 py-2.5 px-3 sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-2 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
+          <div class="flex items-center gap-1.5 shrink-0">
             <button
               type="button"
               (click)="medical.selectCategory(null)"
@@ -177,7 +290,7 @@ import { ConfirmDialogModalComponent } from './components/confirm-dialog-modal.c
           <button
             type="button"
             (click)="openNewCategoryModal()"
-            class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-full border border-teal-200 whitespace-nowrap transition cursor-pointer"
+            class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-full border border-teal-200 whitespace-nowrap transition cursor-pointer shrink-0 ml-2"
           >
             <i class="fa-solid fa-plus"></i> Nueva Categoría
           </button>
@@ -185,13 +298,46 @@ import { ConfirmDialogModalComponent } from './components/confirm-dialog-modal.c
       </section>
 
       <!-- Main Workspace (Master - Detail Grid) -->
-      <main class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 flex-1">
+      <main class="max-w-7xl mx-auto w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-6 flex-1">
+        
+        <!-- Mobile Segmented View Switcher (Visible only on < lg screens) -->
+        <div class="lg:hidden flex items-center bg-slate-200/80 p-1 rounded-2xl mb-4 text-xs font-bold shadow-inner">
+          <button
+            type="button"
+            (click)="mobileTab.set('list')"
+            [class.bg-white]="mobileTab() === 'list'"
+            [class.text-slate-900]="mobileTab() === 'list'"
+            [class.shadow-xs]="mobileTab() === 'list'"
+            [class.text-slate-600]="mobileTab() !== 'list'"
+            class="flex-1 py-2.5 rounded-xl transition text-center flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <i class="fa-solid fa-book-medical text-teal-600"></i>
+            <span>Patologías ({{ medical.filteredDiseases().length }})</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="mobileTab.set('detail')"
+            [class.bg-white]="mobileTab() === 'detail'"
+            [class.text-slate-900]="mobileTab() === 'detail'"
+            [class.shadow-xs]="mobileTab() === 'detail'"
+            [class.text-slate-600]="mobileTab() !== 'detail'"
+            class="flex-1 py-2.5 rounded-xl transition text-center flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <i class="fa-solid fa-file-prescription text-sky-600"></i>
+            <span>Esquema Clínico</span>
+            @if (medical.activeDisease()) {
+              <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+            }
+          </button>
+        </div>
+
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
           <!-- LEFT COLUMN: Diseases Master List (4 cols) -->
           <aside
             class="lg:col-span-4 bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden flex flex-col"
-            [class.hidden]="!mobileMenuOpen() && isMobileView()"
+            [class.hidden]="mobileTab() !== 'list' && isMobileView()"
           >
             <!-- Header of Master List -->
             <div class="p-4 border-b border-slate-100 bg-slate-50/60">
@@ -299,12 +445,35 @@ import { ConfirmDialogModalComponent } from './components/confirm-dialog-modal.c
           </aside>
 
           <!-- RIGHT COLUMN: Detail Workspace (8 cols) -->
-          <section class="lg:col-span-8 space-y-6">
+          <section
+            class="lg:col-span-8 space-y-4 sm:space-y-6"
+            [class.hidden]="mobileTab() !== 'detail' && isMobileView()"
+          >
+            <!-- Mobile back to list button -->
+            <div class="lg:hidden flex items-center justify-between pb-1">
+              <button
+                type="button"
+                (click)="mobileTab.set('list')"
+                class="inline-flex items-center gap-2 text-xs font-bold text-teal-800 bg-teal-50 border border-teal-200/80 px-3.5 py-2 rounded-xl hover:bg-teal-100 transition active:scale-95 cursor-pointer shadow-xs"
+              >
+                <i class="fa-solid fa-arrow-left"></i>
+                <span>Ver todas las patologías</span>
+              </button>
+
+              <button
+                type="button"
+                (click)="openNewDiseaseModal()"
+                class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-xl transition cursor-pointer"
+              >
+                <i class="fa-solid fa-plus text-teal-600"></i>
+                <span>Nueva</span>
+              </button>
+            </div>
             
             @if (medical.activeDisease(); as disease) {
               
               <!-- Disease Header Card -->
-              <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 relative overflow-hidden">
+              <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4 sm:p-6 relative overflow-hidden">
                 <div class="absolute top-0 right-0 left-0 h-1.5 bg-gradient-to-r from-sky-500 via-teal-500 to-indigo-500"></div>
 
                 <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
@@ -418,7 +587,7 @@ import { ConfirmDialogModalComponent } from './components/confirm-dialog-modal.c
                     </div>
 
                     <!-- THREE QUICK COPY ACTION BUTTONS (RF-07) -->
-                    <div class="flex flex-wrap items-center gap-2">
+                    <div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full md:w-auto">
                       
                       <!-- Button 1: COPIAR TODO -->
                       <button
@@ -869,6 +1038,9 @@ export class DashboardComponent {
   protected readonly toast = inject(ToastService);
   private readonly router = inject(Router);
 
+  // Responsive mobile navigation tab ('list' = Patologías, 'detail' = Tratamiento)
+  mobileTab = signal<'list' | 'detail'>('list');
+
   // Responsive mobile menu state
   mobileMenuOpen = signal(false);
 
@@ -935,7 +1107,11 @@ export class DashboardComponent {
   selectDisease(id: string): void {
     this.medical.selectDisease(id);
     if (this.isMobileView()) {
+      this.mobileTab.set('detail');
       this.mobileMenuOpen.set(false);
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     }
   }
 

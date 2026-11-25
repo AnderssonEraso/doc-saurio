@@ -10,24 +10,24 @@ import { ToastService } from '../../core/services/toast.service';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
-    <div class="min-h-screen bg-gradient-to-br from-slate-50 via-sky-50/30 to-teal-50/40 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div class="min-h-screen bg-gradient-to-br from-slate-50 via-sky-50/30 to-teal-50/40 flex flex-col justify-center py-6 sm:py-12 px-3 sm:px-6 lg:px-8">
       <div class="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <div class="inline-block relative mb-2">
           <img
             src="docsaurio-logo.svg"
             alt="DocSaurio Mascota"
-            class="w-20 h-20 mx-auto drop-shadow-md hover:scale-105 transition-transform"
+            class="w-16 h-16 sm:w-20 sm:h-20 mx-auto drop-shadow-md hover:scale-105 transition-transform"
           />
         </div>
-        <h2 class="text-2xl font-bold text-slate-900">Registro de Profesional Clínico</h2>
+        <h2 class="text-xl sm:text-2xl font-bold text-slate-900">Registro de Profesional Clínico</h2>
         <p class="mt-1 text-xs text-slate-600">
           Únete a la red médica de DocSaurio 🩺
         </p>
       </div>
 
-      <div class="mt-6 sm:mx-auto sm:w-full sm:max-w-md px-4">
-        <div class="bg-white py-8 px-6 shadow-xl rounded-2xl border border-slate-100 sm:px-10">
-          <form (submit)="onRegister($event)" class="space-y-4">
+      <div class="mt-4 sm:mt-6 sm:mx-auto sm:w-full sm:max-w-md w-full px-1 sm:px-4">
+        <div class="bg-white py-6 sm:py-8 px-5 sm:px-10 shadow-xl rounded-2xl border border-slate-100">
+          <form (submit)="onRegister($event)" class="space-y-3.5">
             
             <div>
               <label class="block text-xs font-medium text-slate-700">Nombre Completo y Título</label>
@@ -41,7 +41,7 @@ import { ToastService } from '../../core/services/toast.service';
                   name="name"
                   required
                   placeholder="ej. Dra. Mariana Silva"
-                  class="block w-full pl-10 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                  class="block w-full pl-10 pr-3 py-2.5 text-base sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
                 />
               </div>
             </div>
@@ -58,7 +58,7 @@ import { ToastService } from '../../core/services/toast.service';
                   name="specialty"
                   required
                   placeholder="ej. Cardiología, Medicina Interna, Pediatría"
-                  class="block w-full pl-10 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                  class="block w-full pl-10 pr-3 py-2.5 text-base sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
                 />
               </div>
             </div>

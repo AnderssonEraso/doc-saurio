@@ -10,27 +10,27 @@ import { ToastService } from '../../core/services/toast.service';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
-    <div class="min-h-screen bg-gradient-to-br from-slate-50 via-sky-50/30 to-teal-50/40 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div class="min-h-screen bg-gradient-to-br from-slate-50 via-sky-50/30 to-teal-50/40 flex flex-col justify-center py-6 sm:py-12 px-3 sm:px-6 lg:px-8">
       <div class="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <!-- Logo Mascot -->
-        <div class="inline-block relative mb-3">
+        <div class="inline-block relative mb-2 sm:mb-3">
           <img
             src="docsaurio-logo.svg"
             alt="DocSaurio Mascota"
-            class="w-24 h-24 mx-auto drop-shadow-lg hover:scale-105 transition-transform"
+            class="w-20 h-20 sm:w-24 sm:h-24 mx-auto drop-shadow-lg hover:scale-105 transition-transform"
           />
         </div>
-        <h2 class="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center justify-center gap-1.5">
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center justify-center gap-1.5">
           Doc<span class="text-emerald-600">Saurio</span>
-          <span class="text-xl">🩺</span>
+          <span class="text-lg sm:text-xl">🩺</span>
         </h2>
-        <p class="mt-2 text-sm text-slate-600 font-medium">
+        <p class="mt-1 sm:mt-2 text-xs sm:text-sm text-slate-600 font-medium">
           Notas Clínicas & Herramientas
         </p>
       </div>
 
-      <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4">
-        <div class="bg-white py-8 px-6 shadow-xl shadow-slate-200/50 rounded-2xl border border-slate-100 sm:px-10">
+      <div class="mt-6 sm:mt-8 sm:mx-auto sm:w-full sm:max-w-md w-full px-1 sm:px-4">
+        <div class="bg-white py-6 sm:py-8 px-5 sm:px-10 shadow-xl shadow-slate-200/50 rounded-2xl border border-slate-100">
           
           <!-- Login Form -->
           <form (submit)="onLogin($event)" class="space-y-4">
@@ -47,7 +47,7 @@ import { ToastService } from '../../core/services/toast.service';
                   name="email"
                   required
                   placeholder="ej. doctor@mednote.com"
-                  class="block w-full pl-10 pr-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 bg-slate-50/50 hover:bg-white transition"
+                  class="block w-full pl-10 pr-3 py-2.5 text-base sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 bg-slate-50/50 hover:bg-white transition"
                 />
               </div>
             </div>
@@ -68,7 +68,7 @@ import { ToastService } from '../../core/services/toast.service';
                   name="password"
                   required
                   placeholder="••••••••"
-                  class="block w-full pl-10 pr-10 py-2.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 bg-slate-50/50 hover:bg-white transition"
+                  class="block w-full pl-10 pr-10 py-2.5 text-base sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 bg-slate-50/50 hover:bg-white transition"
                 />
                 <button
                   type="button"
@@ -83,12 +83,12 @@ import { ToastService } from '../../core/services/toast.service';
             <button
               type="submit"
               [disabled]="authService.isLoading()"
-              class="w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-transparent rounded-lg shadow-md text-sm font-medium text-white bg-gradient-to-r from-sky-600 to-teal-600 hover:from-sky-700 hover:to-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              class="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-md text-sm font-semibold text-white bg-gradient-to-r from-sky-600 to-teal-600 hover:from-sky-700 hover:to-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               @if (authService.isLoading()) {
                 <i class="fa-solid fa-circle-notch fa-spin"></i> Conectando...
               } @else {
-                <i class="fa-solid fa-right-to-bracket"></i> Iniciar Sesión Médica
+                <i class="fa-solid fa-right-to-bracket"></i> Iniciar Sesión
               }
             </button>
           </form>

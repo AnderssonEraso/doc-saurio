@@ -35,6 +35,15 @@
   backdrop-filter: blur(8px);
 }
 
+/* Touch-optimized horizontal scrollbar hiding */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 .clinical-badge {
   display: inline-flex;
   align-items: center;

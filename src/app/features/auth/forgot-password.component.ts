@@ -9,23 +9,23 @@ import { ToastService } from '../../core/services/toast.service';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
-    <div class="min-h-screen bg-gradient-to-br from-slate-50 via-sky-50/30 to-teal-50/40 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div class="min-h-screen bg-gradient-to-br from-slate-50 via-sky-50/30 to-teal-50/40 flex flex-col justify-center py-6 sm:py-12 px-3 sm:px-6 lg:px-8">
       <div class="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <div class="inline-block relative mb-2">
           <img
             src="docsaurio-logo.svg"
             alt="DocSaurio Mascota"
-            class="w-20 h-20 mx-auto drop-shadow-md hover:scale-105 transition-transform"
+            class="w-16 h-16 sm:w-20 sm:h-20 mx-auto drop-shadow-md hover:scale-105 transition-transform"
           />
         </div>
-        <h2 class="text-2xl font-bold text-slate-900">Recuperación de Contraseña</h2>
+        <h2 class="text-xl sm:text-2xl font-bold text-slate-900">Recuperación de Contraseña</h2>
         <p class="mt-1 text-xs text-slate-600">
           Te enviaremos un enlace seguro para restablecer tu acceso clínico
         </p>
       </div>
 
-      <div class="mt-6 sm:mx-auto sm:w-full sm:max-w-md px-4">
-        <div class="bg-white py-8 px-6 shadow-xl rounded-2xl border border-slate-100 sm:px-10">
+      <div class="mt-4 sm:mt-6 sm:mx-auto sm:w-full sm:max-w-md w-full px-1 sm:px-4">
+        <div class="bg-white py-6 sm:py-8 px-5 sm:px-10 shadow-xl rounded-2xl border border-slate-100">
           
           @if (!sent()) {
             <form (submit)="onSubmit($event)" class="space-y-4">
